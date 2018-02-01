@@ -36,14 +36,7 @@ typedef struct jobArgs {
 } jobArgs;
 
 int jobCmp(const void *a, const void *b) {
-    job *x = (job*) *((job**)a);
-    job *y = (job*) *((job**)b);
-
-    if (x->startAfter == y->startAfter) {
-        return 0;
-    }
-
-    return (x->startAfter < y->startAfter) ? -1 : 1;
+    return ((job*) *((job**) a))->startAfter - ((job*) *((job**) b))->startAfter;
 }
 
 /*
