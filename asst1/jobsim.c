@@ -1,3 +1,21 @@
+/*
+ * Simulate execution of multiple jobs running on
+ * seperate threads using the `my_pthread_t.h` library.
+ * Jobs read from a text file containing 3 columns of
+ * integers seperated by spaces:
+ *
+ * col1: number of seconds after the sim starts that the 
+ * the thread should be created
+ *
+ * col2: how many seconds the job should run for
+ *
+ * col3: number of times thread should yield control
+ * (yields will be evenly distributed throughout duration
+ * of the job)
+ *
+ * results are printed to stdout
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,6 +46,14 @@ int jobCmp(const void *a, const void *b) {
     return (x->startAfter < y->startAfter) ? -1 : 1;
 }
 
+/*
+ * parses input txt files and populates job array
+ *
+ * job - ptr to an array of job pointers. populates this
+ * array with jobs
+ *
+ * return - len of job array
+ */
 int parseJobList(const char *filename, job ***jobsPtr) {
     FILE *fp = fopen(filename, "r");
     char *line = NULL;
@@ -73,6 +99,12 @@ void printBenchmarks(job **jobs, int jobsLen) {
     }
 }
 
+/*
+ * simulation of a job.
+ *
+ * duration - how many seconds it should run for
+ * numIOs - number of times it should yield
+ */
 void *runJob(int duration, int numIOs) {
     struct timeval startTime;
     struct timeval endTime;
@@ -90,8 +122,7 @@ void *runJob(int duration, int numIOs) {
           ioInterval += ioInterval;
         }
 
-        float x = rand() % 20;
-        x = sin(x);
+        sleep(1);
     }
 
     gettimeofday(&endTime, NULL);
@@ -101,6 +132,9 @@ void *runJob(int duration, int numIOs) {
     return (void*) runtime;
 }
 
+/*
+ * free memory from main
+ */
 void cleanup(job **jobs, int jobsLen) {
     int i = 0;
     
@@ -110,8 +144,14 @@ void cleanup(job **jobs, int jobsLen) {
     free(jobs);
 }
 
+/*
+ * runs jobs and updates job structs with
+ * runtime stats
+ */
 void runSim(job **jobs, int jobsLen) {
+    // sort jobs by start time
     qsort((void*)jobs, jobsLen, sizeof(job*), jobCmp);
+
     my_pthread_t *threads = (my_pthread_t*) malloc(sizeof(my_pthread_t) * jobsLen);
     jobArgs **threadArgs = (jobArgs**) malloc(sizeof(jobArgs*) * jobsLen);
     struct timeval simStartTime;
@@ -120,10 +160,12 @@ void runSim(job **jobs, int jobsLen) {
 
     gettimeofday(&simStartTime, NULL);
 
+    // create threads
     i = 0;
     while (i < jobsLen) {
         gettimeofday(&simCurTime, NULL);
-        if ((simCurTime.tv_sec - simStartTime.tv_sec) >= jobs[i]->startAfter) {
+        int passedTimeToLaunch = (simCurTime.tv_sec - simStartTime.tv_sec) >= jobs[i]->startAfter;
+        if (passedTimeToLaunch) {
             my_pthread_t thread;
             pthread_attr_t *attr = NULL;
 
@@ -142,6 +184,7 @@ void runSim(job **jobs, int jobsLen) {
         sleep(1);
     }
 
+    // join on threads
     i = 0;
     while (i < jobsLen) {
         long int *ret_val;
@@ -163,8 +206,8 @@ void runSim(job **jobs, int jobsLen) {
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        perror("not enough args");
-        exit(EXIT_FAILURE);
+        puts("Usage: ./jobsim <jobs.txt>\n");
+        return EXIT_FAILURE;
     }
 
     int jobsLen = 0;
