@@ -184,6 +184,7 @@ void runSim(job **jobs, int jobsLen) {
 
         //my_pthread_join(threads[i], (void**) &ret_val);
         //jobs[i]->totalRuntime = *ret_val;
+        free(ret_val);
         
 
         i++;
