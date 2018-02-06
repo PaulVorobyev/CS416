@@ -1,4 +1,5 @@
-#README
+README
+=
 
 This is a README for the scheduler assignment.
 
