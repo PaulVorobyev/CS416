@@ -3,3 +3,5 @@
 jobsim
 *.a
 *.o
+compile_commands.json
+jobsim.dSYM/

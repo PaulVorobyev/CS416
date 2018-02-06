@@ -17,4 +17,4 @@ sim: jobsim.c my_pthread.o
 	$(CC) -g -o jobsim my_pthread.o jobsim.c 
 
 clean:
-	rm -rf testfile *.o *.a jobsim
+	rm -rf testfile *.o *.a jobsim jobsim.dSYM
