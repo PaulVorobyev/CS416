@@ -198,6 +198,19 @@ void runSim(job **jobs, int jobsLen) {
     free(threadArgs);
 }
 
+void test_queue() {
+    queue * q = queue_init();
+    for (int i = 0; i < 10; i++) {
+        int * j = malloc(sizeof(int));
+        *j = i;
+        queue_enqueue(j, q);
+    }
+    
+    for (int i = 0; i < 10; i++) {
+        printf("%d\n", *((int *) queue_dequeue(q)));
+    }
+}
+
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         puts("Usage: ./jobsim <jobs.txt>\n");

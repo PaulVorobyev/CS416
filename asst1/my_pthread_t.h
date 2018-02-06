@@ -16,24 +16,66 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/ucontext.h> // TODO: remove sys when testing on ilab
 
+/* Primitives */
+
+// node for queue implementation
+typedef struct queueNode {
+    void * data;
+    struct queueNode * next;
+    struct queueNode * prev;
+} node;
+
+// wrapper for node and related methods
+typedef struct queueStructure {
+    node * head;
+    node * rear;
+    int size;
+} queue;
+
+/* Scheduling types */
 typedef uint my_pthread_t;
 
+typedef enum State {
+    Running,
+    Ready,
+    Terminated,
+    Waiting,
+    Locking
+} state_t;
+
 typedef struct threadControlBlock {
-	/* add something here */
+    my_pthread_t id;
+    ucontext_t context;
+    state_t state;
 } tcb; 
+
+/**
+ * Struct for maintaining shceduler state
+ * 1) timerSet - bool that checks if timer has been set for the first time (only false when first thread is created)
+ * 2) 
+ *
+ */
+typedef struct scheduler {
+    int timerSet; // 0 = false, 1 = true
+     
+} sched;
 
 /* mutex struct definition */
 typedef struct my_pthread_mutex_t {
 	/* add something here */
 } my_pthread_mutex_t;
 
-/* define your data structures here: */
+/* Queue Functions */
 
-// Feel free to add your own auxiliary data structures
+queue * queue_init();
+void queue_enqueue(void * element, queue * q);
+void * queue_dequeue(queue * q);
+int isEmpty();
 
 
-/* Function Declarations: */
+/* Scheduling functions */
 
 /* create a new thread */
 int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*function)(void*), void * arg);
