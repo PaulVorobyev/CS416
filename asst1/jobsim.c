@@ -200,25 +200,28 @@ void runSim(job **jobs, int jobsLen) {
 
 void test_queue() {
     queue * q = queue_init();
-    for (int i = 0; i < 10; i++) {
+    int i = 0;
+    for (i = 0; i < 10; i++) {
         int * j = malloc(sizeof(int));
         *j = i;
         queue_enqueue(j, q);
     }
     
-    for (int i = 0; i < 10; i++) {
+    for (i = 0; i < 10; i++) {
         printf("%d\n", *((int *) queue_dequeue(q)));
     }
 }
 
 void foo() {
-    for (int i = 0; i < 200; i++) {
+    int i = 0;
+    for (i = 0; i < 200; i++) {
         printf("foo!\n");
     }
 }
 
 void bar() {
-    for (int i = 0; i < 200; i++) {
+    int i = 0;
+    for (i = 0; i < 200; i++) {
         printf("bar!\n");
     }
 }
