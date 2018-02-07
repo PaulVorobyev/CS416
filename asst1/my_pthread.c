@@ -64,6 +64,14 @@ int isEmpty(queue * q) {
 
 /* Scheduling functions */
 
+tcb * tcb_init() {
+    tcb * t = (tcb * ) malloc(sizeof(tcb));
+    t->id = tcb;
+    t->context = NULL;
+    t->state = NULL;
+    return t;
+}
+
 /* create a new thread */
 int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*function)(void*), void * arg) {
 	return 0;
