@@ -66,8 +66,8 @@ int isEmpty(queue * q) {
 
 tcb * tcb_init() {
     tcb * t = (tcb * ) malloc(sizeof(tcb));
-    t->id = tcb;
-    t->context = NULL;
+    t->id = (int) t;
+    t->context = *((ucontext_t *) malloc(sizeof(ucontext_t)));
     t->state = NULL;
     return t;
 }
