@@ -80,32 +80,76 @@ static void setAlarm() {
     ualarm(scheduler->interval, scheduler->interval);
 }
 
-/* Scheduling functions */
-
 tcb * tcb_init() {
     tcb * t = (tcb * ) malloc(sizeof(tcb));
-    t->id = (int) t;
-    t->context = *((ucontext_t *) malloc(sizeof(ucontext_t)));
+    t->id = (int) t; // set id = to address for utility
+    getcontext(&(t->context));
     t->state = NULL;
     return t;
 }
 
-sched * sched_init() {
+void alrm_handler(int signo, siginfo_t* siginfo, void* context) {
+    if (scheduler->s_queue == NULL) { 
+        scheduler->s_queue = queue_init();
+        tcb * t_old = tcb_init();
+        t_old->context = *((ucontext_t *) context);
+        queue_enqueue((void *) t_old, scheduler->s_queue);
+    } else {
+        queue_enqueue((void *) scheduler->curr, scheduler->s_queue);
+    }
+    
+
+
+    // see if curr is still running or over?
+    // if (still running) { re-queue }
+    //
+    // then dequeue next tcb, set sched->curr, and setcontext on it
+    tcb * t = (tcb *) queue_dequeue(scheduler->s_queue);
+    scheduler->curr = t;
+    setcontext(&(t->context));
+}
+
+/* Scheduling functions */
+
+void sched_init() { // initializes global scheduler variable
     if (scheduler != NULL) {
-        printf("Scheduler already created!");
-        return NULL;
+        printf("Error: scheduler already created!");
     } else {
         scheduler = (sched *) malloc(sizeof(sched));
         scheduler->timerSet = 0;
-        setAlarm();
-        scheduler->s_queue = queue_init();
-        return scheduler;
+        scheduler->interval = 25;
+        
+        return;
     }
 }
 
 /* create a new thread */
-int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*function)(void*), void * arg) {
-	return 0;
+int my_pthread_create(void *(*function)(void*), void * arg) {
+    tcb * t = tcb_init(); // thread to be created
+
+    // create new thread
+    getcontext(&(t->context));
+    t->context.uc_stack.ss_sp = malloc(MEM);
+    t->context.uc_stack.ss_size = MEM;
+    t->context.uc_stack.ss_flags = 0;
+    // TODO uc_link
+    makecontext(&(t->context), function, 0);
+    queue_enqueue((void *) t, scheduler->s_queue);
+
+    // should only be executed on first thread create
+    if (scheduler == NULL) { 
+        sched_init();
+        setAlarm();
+        signal(SIGALRM, alrm_handler);
+        
+        /*tcb * t2 = tcb_init(); */
+        /*t2->context.uc_stack.ss_sp = malloc(MEM);*/
+        /*t2->context.uc_stack.ss_size = MEM;*/
+        /*queue_enqueue((void *) t2, scheduler->s_queue);*/
+        /*getcontext(&(t2->context));*/
+    }
+    
+	return t->id;
 };
 
 /* give CPU pocession to other user level threads voluntarily */

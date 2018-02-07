@@ -10,6 +10,8 @@
 
 #define _GNU_SOURCE
 
+#define MEM 64000
+
 /* include lib header files that you need here: */
 #include <unistd.h>
 #include <sys/syscall.h>
@@ -53,14 +55,12 @@ typedef struct threadControlBlock {
 
 /**
  * Struct for maintaining shceduler state
- * 1) timerSet - bool that checks if timer has been set for the first time (only false when first thread is created)
- * 2) 
- *
  */
 typedef struct scheduler {
     int timerSet; // 0 = false, 1 = true
     int interval; // time in microseconds for alarm to go off
     queue * s_queue; // scheduling queue
+    tcb * curr; // current thread
 } sched;
 
 /* mutex struct definition */
@@ -79,7 +79,7 @@ int isEmpty();
 /* Scheduling functions */
 
 /* create a new thread */
-int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*function)(void*), void * arg);
+int my_pthread_create(void *(*function)(void*), void * arg);
 
 /* give CPU pocession to other user level threads voluntarily */
 int my_pthread_yield();

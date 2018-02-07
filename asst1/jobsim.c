@@ -211,19 +211,23 @@ void test_queue() {
     }
 }
 
-int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        puts("Usage: ./jobsim <jobs.txt>\n");
-        return EXIT_FAILURE;
+void foo() {
+    for (int i = 0; i < 200; i++) {
+        printf("foo!\n");
     }
+}
 
-    int jobsLen = 0;
-    job **jobs = NULL;
-    jobsLen = parseJobList(argv[1], &jobs);
+void bar() {
+    for (int i = 0; i < 200; i++) {
+        printf("bar!\n");
+    }
+}
 
-    runSim(jobs, jobsLen);
-    printBenchmarks(jobs, jobsLen);
-    cleanup(jobs, jobsLen);
-
-    return EXIT_SUCCESS;
+int main(int argc, char* argv[]) {
+   printf("START!\n");
+   my_pthread_create(&foo, NULL);
+    
+   while(1) {
+       printf("MAIN RUNNING!\n");
+   }
 }
