@@ -89,8 +89,8 @@ tcb * tcb_init() {
 }
 
 void alrm_handler(int signo, siginfo_t* siginfo, void* context) {
-    if (scheduler->s_queue == NULL) { 
-        scheduler->s_queue = queue_init();
+    if (!scheduler->mainThreadCreated) { 
+        scheduler->mainThreadCreated = 1;
         tcb * t_old = tcb_init();
         t_old->context = *((ucontext_t *) context);
         queue_enqueue((void *) t_old, scheduler->s_queue);
@@ -118,6 +118,8 @@ void sched_init() { // initializes global scheduler variable
         scheduler = (sched *) malloc(sizeof(sched));
         scheduler->timerSet = 0;
         scheduler->interval = 25;
+        scheduler->s_queue = queue_init();
+        scheduler->mainThreadCreated = 0;
         
         return;
     }
@@ -134,7 +136,6 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
     t->context.uc_stack.ss_flags = 0;
     // TODO uc_link
     makecontext(&(t->context), function, 0);
-    queue_enqueue((void *) t, scheduler->s_queue);
 
     // should only be executed on first thread create
     if (scheduler == NULL) { 
@@ -148,6 +149,7 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
         /*queue_enqueue((void *) t2, scheduler->s_queue);*/
         /*getcontext(&(t2->context));*/
     }
+    queue_enqueue((void *) t, scheduler->s_queue);
     
 	return t->id;
 };

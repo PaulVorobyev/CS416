@@ -61,6 +61,7 @@ typedef struct scheduler {
     int interval; // time in microseconds for alarm to go off
     queue * s_queue; // scheduling queue
     tcb * curr; // current thread
+    int mainThreadCreated; // TODO remove this stupid flag
 } sched;
 
 /* mutex struct definition */
