@@ -59,7 +59,8 @@ typedef struct threadControlBlock {
  */
 typedef struct scheduler {
     int timerSet; // 0 = false, 1 = true
-     
+    int interval; // time in microseconds for alarm to go off
+    queue * s_queue; // scheduling queue
 } sched;
 
 /* mutex struct definition */

@@ -8,6 +8,9 @@
 
 #include "my_pthread_t.h"
 
+/* Globals */
+static sched * scheduler = NULL;
+
 /* Queue Functions */
 
 queue * queue_init() {
@@ -62,6 +65,21 @@ int isEmpty(queue * q) {
     return q->size == 0;
 }
 
+/* Alarm-related functions */
+
+static void setAlarm() {
+    if (scheduler == NULL) {
+        printf("Error: scheduler not initialized");
+        return;
+    } else if(scheduler->timerSet == 1) {
+        printf("Error: timer already set");
+        return;
+    }
+
+    scheduler->timerSet = 1;
+    ualarm(scheduler->interval, scheduler->interval);
+}
+
 /* Scheduling functions */
 
 tcb * tcb_init() {
@@ -70,6 +88,19 @@ tcb * tcb_init() {
     t->context = *((ucontext_t *) malloc(sizeof(ucontext_t)));
     t->state = NULL;
     return t;
+}
+
+sched * sched_init() {
+    if (scheduler != NULL) {
+        printf("Scheduler already created!");
+        return NULL;
+    } else {
+        scheduler = (sched *) malloc(sizeof(sched));
+        scheduler->timerSet = 0;
+        setAlarm();
+        scheduler->s_queue = queue_init();
+        return scheduler;
+    }
 }
 
 /* create a new thread */
