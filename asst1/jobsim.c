@@ -234,4 +234,6 @@ int main(int argc, char* argv[]) {
    while(1) {
        printf("MAIN RUNNING!\n");
    }
+
+   puts("broooo");
 }

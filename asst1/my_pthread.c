@@ -20,13 +20,17 @@ static void setAlarm() {
     if (scheduler == NULL) {
         printf("Error: scheduler not initialized");
         return;
-    } else if(scheduler->timerSet == 1) {
-        printf("Error: timer already set");
-        return;
-    }
+    } //else if(scheduler->timerSet == 1) {
+        //printf("Error: timer already set");
+        //return;
+    //}
 
     scheduler->timerSet = 1;
     ualarm(scheduler->interval, scheduler->interval);
+}
+
+static void disableAlarm() {
+    ualarm(0, 0);
 }
 
 tcb * tcb_init() {
@@ -39,6 +43,8 @@ tcb * tcb_init() {
 
 void alrm_handler(int signo) {
 //void alrm_handler(int signo, siginfo_t* siginfo, void* context) {
+    disableAlarm();
+    //pthread_sigmask(SIG_BLOCK, &set, NULL);
     printf("SWITCH! - %d\n", timesSwitched++);
     //tcb * t_old = tcb_init();
     //memcpy((void*)&t_old->context, context, sizeof(ucontext_t));
@@ -55,7 +61,10 @@ void alrm_handler(int signo) {
     tcb *old = scheduler->curr;
     scheduler->curr = ((tcb*) queue_dequeue(scheduler->s_queue));
     queue_enqueue((void*) old, scheduler->s_queue);
+    printf("END SWITCH! - %d\n", timesSwitched++);
+    setAlarm();
     swapcontext(&old->context, &scheduler->curr->context);
+    //pthread_sigmask(SIG_UNBLOCK, &set, NULL);
         //scheduler->curr->context = t_old->context;
         //queue_enqueue((void *) scheduler->curr, scheduler->s_queue);
     //}
@@ -80,7 +89,7 @@ void sched_init() { // initializes global scheduler variable
     } else {
         scheduler = (sched *) malloc(sizeof(sched));
         scheduler->timerSet = 0;
-        scheduler->interval = 200;
+        scheduler->interval = 25;
         scheduler->s_queue = queue_init();
         scheduler->mainThreadCreated = 0;
         
@@ -90,9 +99,10 @@ void sched_init() { // initializes global scheduler variable
 
 /* create a new thread */
 int my_pthread_create(void *(*function)(void*), void * arg) {
-    if (fuckFlag) {
-        pthread_sigmask(SIG_BLOCK, &set, NULL);
-    }
+    disableAlarm();
+    //if (fuckFlag) {
+    //    pthread_sigmask(SIG_BLOCK, &set, NULL);
+    //}
 
     tcb * t = tcb_init(); // thread to be created
     tcb * curr;
@@ -106,16 +116,16 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
     // TODO uc_link
     makecontext(&(t->context), function, 0);
     // reset the new thread's signal blocker
-    sigemptyset(&(t->context.uc_sigmask));
+    //sigemptyset(&(t->context.uc_sigmask));
 
     // should only be executed on first thread create
     if (scheduler == NULL) { 
         sched_init();
-        setAlarm();
+        //sigemptyset(&set); // TODO put these in their proper place
+        //sigaddset(&set, SIGALRM);
+        //pthread_sigmask(SIG_BLOCK, &set, NULL);
+        //setAlarm();
         signal(SIGALRM, alrm_handler);
-        pthread_sigmask(SIG_BLOCK, &set, NULL);
-        sigemptyset(&set); // TODO put these in their proper place
-        sigaddset(&set, SIGALRM);
         fuckFlag = 1;
         curr = tcb_init();
 
@@ -134,8 +144,9 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
     queue_enqueue((void *) curr, scheduler->s_queue);
     scheduler->curr = t;
     
-    pthread_sigmask(SIG_UNBLOCK, &set, NULL);
+    setAlarm();
     swapcontext(&(curr->context), &(t->context));
+    //pthread_sigmask(SIG_UNBLOCK, &set, NULL);
 	return t->id;
 };
 
