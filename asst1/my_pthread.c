@@ -12,6 +12,7 @@
 static sched * scheduler = NULL;
 static sigset_t set;
 int timesSwitched = 0; // TODO temp
+int fuckFlag = 0; // TODO remove this (its for sigset_t)
 
 /* Queue Functions */
 
@@ -131,7 +132,7 @@ void sched_init() { // initializes global scheduler variable
     } else {
         scheduler = (sched *) malloc(sizeof(sched));
         scheduler->timerSet = 0;
-        scheduler->interval = 25;
+        scheduler->interval = 200;
         scheduler->s_queue = queue_init();
         scheduler->mainThreadCreated = 0;
         
@@ -141,6 +142,10 @@ void sched_init() { // initializes global scheduler variable
 
 /* create a new thread */
 int my_pthread_create(void *(*function)(void*), void * arg) {
+    if (fuckFlag) {
+        pthread_sigmask(SIG_BLOCK, &set, NULL);
+    }
+
     tcb * t = tcb_init(); // thread to be created
 
     // create new thread
@@ -148,17 +153,20 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
     t->context.uc_stack.ss_sp = malloc(MEM);
     t->context.uc_stack.ss_size = MEM;
     t->context.uc_stack.ss_flags = 0;
+    t->context.uc_link = 0;
     // TODO uc_link
     makecontext(&(t->context), function, 0);
+    sigemptyset(&(t->context.uc_sigmask));
 
     // should only be executed on first thread create
     if (scheduler == NULL) { 
         sched_init();
         setAlarm();
         signal(SIGALRM, alrm_handler);
-        /*sigemptyset(&set);*/ // TODO put these in their proper place
-        /*sigaddset(&set, SIGALRM);*/
-        /*pthread_sigmask(SIG_BLOCK, &set, NULL);*/
+        sigemptyset(&set); // TODO put these in their proper place
+        sigaddset(&set, SIGALRM);
+        fuckFlag = 1;
+        pthread_sigmask(SIG_BLOCK, &set, NULL);
 
         /*tcb * t2 = tcb_init(); */
         /*t2->context.uc_stack.ss_sp = malloc(MEM);*/
@@ -166,8 +174,10 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
         /*queue_enqueue((void *) t2, scheduler->s_queue);*/
         /*getcontext(&(t2->context));*/
     }
+    
     queue_enqueue((void *) t, scheduler->s_queue);
     
+    pthread_sigmask(SIG_UNBLOCK, &set, NULL);
 	return t->id;
 };
 
