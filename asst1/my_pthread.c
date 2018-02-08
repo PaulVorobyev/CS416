@@ -91,26 +91,28 @@ tcb * tcb_init() {
     return t;
 }
 
-void alrm_handler(int signo, siginfo_t* siginfo, void* context) {
+void alrm_handler(int signo) {
+//void alrm_handler(int signo, siginfo_t* siginfo, void* context) {
     printf("SWITCH! - %d\n", timesSwitched++);
     //tcb * t_old = tcb_init();
     //memcpy((void*)&t_old->context, context, sizeof(ucontext_t));
     //t_old->context.uc_stack.ss_sp = malloc(t_old->context.uc_stack.ss_size);
     //memcpy((void*)t_old->context.uc_stack.ss_sp, ((ucontext_t*) context)->uc_stack.ss_sp, t_old->context.uc_stack.ss_size);
-    if (!scheduler->mainThreadCreated) { 
+    /*if (!scheduler->mainThreadCreated) { 
         scheduler->mainThreadCreated = 1;
         scheduler->curr = ((tcb*) queue_dequeue(scheduler->s_queue));
         setcontext(&scheduler->curr->context);
-        /*//t_old->context = *((ucontext_t *) context);*/
-        /*queue_enqueue((void *) t_old, scheduler->s_queue);*/
-    } else {
-        tcb *old = scheduler->curr;
-        scheduler->curr = ((tcb*) queue_dequeue(scheduler->s_queue));
-        queue_enqueue((void*) old, scheduler->s_queue);
-        swapcontext(&old->context, &scheduler->curr->context);
+        //t_old->context = *((ucontext_t *) context);
+        //queue_enqueue((void *) t_old, scheduler->s_queue);
+    }*/
+    //else {
+    tcb *old = scheduler->curr;
+    scheduler->curr = ((tcb*) queue_dequeue(scheduler->s_queue));
+    queue_enqueue((void*) old, scheduler->s_queue);
+    swapcontext(&old->context, &scheduler->curr->context);
         //scheduler->curr->context = t_old->context;
         //queue_enqueue((void *) scheduler->curr, scheduler->s_queue);
-    }
+    //}
     
 
 
@@ -147,6 +149,7 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
     }
 
     tcb * t = tcb_init(); // thread to be created
+    tcb * curr;
 
     // create new thread
     getcontext(&(t->context));
@@ -156,6 +159,7 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
     t->context.uc_link = 0;
     // TODO uc_link
     makecontext(&(t->context), function, 0);
+    // reset the new thread's signal blocker
     sigemptyset(&(t->context.uc_sigmask));
 
     // should only be executed on first thread create
@@ -163,20 +167,28 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
         sched_init();
         setAlarm();
         signal(SIGALRM, alrm_handler);
+        pthread_sigmask(SIG_BLOCK, &set, NULL);
         sigemptyset(&set); // TODO put these in their proper place
         sigaddset(&set, SIGALRM);
         fuckFlag = 1;
-        pthread_sigmask(SIG_BLOCK, &set, NULL);
+        curr = tcb_init();
 
         /*tcb * t2 = tcb_init(); */
         /*t2->context.uc_stack.ss_sp = malloc(MEM);*/
         /*t2->context.uc_stack.ss_size = MEM;*/
         /*queue_enqueue((void *) t2, scheduler->s_queue);*/
         /*getcontext(&(t2->context));*/
+    } else {
+        curr = scheduler->curr;
     }
     
-    queue_enqueue((void *) t, scheduler->s_queue);
+    t->context.uc_link = &curr->context;
+    // enqueue the thread that called create
+    // set curr equal to new thread
+    queue_enqueue((void *) curr, scheduler->s_queue);
+    scheduler->curr = t;
     
+    swapcontext(curr->context, t->context);
     pthread_sigmask(SIG_UNBLOCK, &set, NULL);
 	return t->id;
 };
