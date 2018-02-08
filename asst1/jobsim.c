@@ -215,20 +215,21 @@ void test_queue() {
 void foo() {
     int i = 0;
     for (i = 0; i < 200; i++) {
-        printf("foo!\n");
+        printf("foo! %d\n", i);
     }
 }
 
 void bar() {
     int i = 0;
     for (i = 0; i < 200; i++) {
-        printf("bar!\n");
+        printf("bar! %d\n", i);
     }
 }
 
 int main(int argc, char* argv[]) {
    printf("START!\n");
    my_pthread_create(&foo, NULL);
+   my_pthread_create(&bar, NULL);
     
    while(1) {
        printf("MAIN RUNNING!\n");

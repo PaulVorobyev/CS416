@@ -10,6 +10,8 @@
 
 /* Globals */
 static sched * scheduler = NULL;
+static sigset_t set;
+int timesSwitched = 0; // TODO temp
 
 /* Queue Functions */
 
@@ -89,12 +91,14 @@ tcb * tcb_init() {
 }
 
 void alrm_handler(int signo, siginfo_t* siginfo, void* context) {
+    printf("SWITCH! - %d\n", timesSwitched++);
     if (!scheduler->mainThreadCreated) { 
         scheduler->mainThreadCreated = 1;
         tcb * t_old = tcb_init();
         t_old->context = *((ucontext_t *) context);
         queue_enqueue((void *) t_old, scheduler->s_queue);
     } else {
+        scheduler->curr->context = *((ucontext_t *) context);
         queue_enqueue((void *) scheduler->curr, scheduler->s_queue);
     }
     
@@ -106,6 +110,7 @@ void alrm_handler(int signo, siginfo_t* siginfo, void* context) {
     // then dequeue next tcb, set sched->curr, and setcontext on it
     tcb * t = (tcb *) queue_dequeue(scheduler->s_queue);
     scheduler->curr = t;
+    /*printf("SWITCHFINISH! \n");*/
     setcontext(&(t->context));
 }
 
@@ -142,7 +147,10 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
         sched_init();
         setAlarm();
         signal(SIGALRM, alrm_handler);
-        
+        /*sigemptyset(&set);*/ // TODO put these in their proper place
+        /*sigaddset(&set, SIGALRM);*/
+        /*pthread_sigmask(SIG_BLOCK, &set, NULL);*/
+
         /*tcb * t2 = tcb_init(); */
         /*t2->context.uc_stack.ss_sp = malloc(MEM);*/
         /*t2->context.uc_stack.ss_size = MEM;*/

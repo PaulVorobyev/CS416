@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ucontext.h> // TODO: remove sys when testing on ilab
+#include <signal.h>
 
 /* Primitives */
 
