@@ -15,16 +15,30 @@
 /* include lib header files that you need here: */
 #include <unistd.h>
 #include <sys/syscall.h>
-#include <sys/types.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <signal.h>
+#include <sys/ucontext.h>
 #include "data_structure.h"
 
+/* State and TCB */
 
-/**
- * Struct for maintaining shceduler state
- */
+typedef uint my_pthread_t;
+
+typedef enum State {
+    Running,
+    Ready,
+    Terminated,
+    Waiting,
+    Locking
+} state_t;
+
+typedef struct threadControlBlock {
+    my_pthread_t id;
+    ucontext_t context;
+    state_t state;
+} tcb;
+
+/* Scheduler state struct */
 typedef struct scheduler {
     int timerSet; // 0 = false, 1 = true
     int interval; // time in microseconds for alarm to go off
@@ -38,12 +52,7 @@ typedef struct my_pthread_mutex_t {
 	/* add something here */
 } my_pthread_mutex_t;
 
-/* Queue Functions */
 
-queue * queue_init();
-void queue_enqueue(void * element, queue * q);
-void * queue_dequeue(queue * q);
-int isEmpty();
 
 
 /* Scheduling functions */

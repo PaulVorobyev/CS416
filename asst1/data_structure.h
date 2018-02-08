@@ -14,27 +14,8 @@
 
 #include <stdlib.h>
 #include <sys/types.h>
-#include <sys/ucontext.h>
 
 /* Struct definitions */
-
-// Thread
-
-typedef uint my_pthread_t;
-
-typedef enum State {
-    Running,
-    Ready,
-    Terminated,
-    Waiting,
-    Locking
-} state_t;
-
-typedef struct threadControlBlock {
-    my_pthread_t id;
-    ucontext_t context;
-    state_t state;
-} tcb; 
 
 // Queue
 
