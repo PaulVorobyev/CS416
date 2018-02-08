@@ -156,7 +156,7 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
     t->context.uc_stack.ss_sp = malloc(MEM);
     t->context.uc_stack.ss_size = MEM;
     t->context.uc_stack.ss_flags = 0;
-    t->context.uc_link = 0;
+    //t->context.uc_link = 0;
     // TODO uc_link
     makecontext(&(t->context), function, 0);
     // reset the new thread's signal blocker
@@ -182,14 +182,14 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
         curr = scheduler->curr;
     }
     
-    t->context.uc_link = &curr->context;
+    t->context.uc_link = &(curr->context);
     // enqueue the thread that called create
     // set curr equal to new thread
     queue_enqueue((void *) curr, scheduler->s_queue);
     scheduler->curr = t;
     
-    swapcontext(curr->context, t->context);
     pthread_sigmask(SIG_UNBLOCK, &set, NULL);
+    swapcontext(&(curr->context), &(t->context));
 	return t->id;
 };
 
