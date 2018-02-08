@@ -92,14 +92,23 @@ tcb * tcb_init() {
 
 void alrm_handler(int signo, siginfo_t* siginfo, void* context) {
     printf("SWITCH! - %d\n", timesSwitched++);
+    //tcb * t_old = tcb_init();
+    //memcpy((void*)&t_old->context, context, sizeof(ucontext_t));
+    //t_old->context.uc_stack.ss_sp = malloc(t_old->context.uc_stack.ss_size);
+    //memcpy((void*)t_old->context.uc_stack.ss_sp, ((ucontext_t*) context)->uc_stack.ss_sp, t_old->context.uc_stack.ss_size);
     if (!scheduler->mainThreadCreated) { 
         scheduler->mainThreadCreated = 1;
-        tcb * t_old = tcb_init();
-        t_old->context = *((ucontext_t *) context);
-        queue_enqueue((void *) t_old, scheduler->s_queue);
+        scheduler->curr = ((tcb*) queue_dequeue(scheduler->s_queue));
+        setcontext(&scheduler->curr->context);
+        /*//t_old->context = *((ucontext_t *) context);*/
+        /*queue_enqueue((void *) t_old, scheduler->s_queue);*/
     } else {
-        scheduler->curr->context = *((ucontext_t *) context);
-        queue_enqueue((void *) scheduler->curr, scheduler->s_queue);
+        tcb *old = scheduler->curr;
+        scheduler->curr = ((tcb*) queue_dequeue(scheduler->s_queue));
+        queue_enqueue((void*) old, scheduler->s_queue);
+        swapcontext(&old->context, &scheduler->curr->context);
+        //scheduler->curr->context = t_old->context;
+        //queue_enqueue((void *) scheduler->curr, scheduler->s_queue);
     }
     
 
@@ -108,10 +117,10 @@ void alrm_handler(int signo, siginfo_t* siginfo, void* context) {
     // if (still running) { re-queue }
     //
     // then dequeue next tcb, set sched->curr, and setcontext on it
-    tcb * t = (tcb *) queue_dequeue(scheduler->s_queue);
-    scheduler->curr = t;
-    /*printf("SWITCHFINISH! \n");*/
-    setcontext(&(t->context));
+    //tcb * t = (tcb *) queue_dequeue(scheduler->s_queue);
+    //scheduler->curr = t;
+    //printf("Thing to be switched into, id: %d\n", t->id);
+    //setcontext(&(t->context));
 }
 
 /* Scheduling functions */
