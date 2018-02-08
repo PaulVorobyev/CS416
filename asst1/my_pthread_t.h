@@ -18,41 +18,9 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/ucontext.h> // TODO: remove sys when testing on ilab
 #include <signal.h>
+#include "data_structure.h"
 
-/* Primitives */
-
-// node for queue implementation
-typedef struct queueNode {
-    void * data;
-    struct queueNode * next;
-    struct queueNode * prev;
-} node;
-
-// wrapper for node and related methods
-typedef struct queueStructure {
-    node * head;
-    node * rear;
-    int size;
-} queue;
-
-/* Scheduling types */
-typedef uint my_pthread_t;
-
-typedef enum State {
-    Running,
-    Ready,
-    Terminated,
-    Waiting,
-    Locking
-} state_t;
-
-typedef struct threadControlBlock {
-    my_pthread_t id;
-    ucontext_t context;
-    state_t state;
-} tcb; 
 
 /**
  * Struct for maintaining shceduler state
