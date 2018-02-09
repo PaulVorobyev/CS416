@@ -139,7 +139,14 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
 };
 
 /* give CPU pocession to other user level threads voluntarily */
-int my_pthread_yield() {
+int my_pthread_yield() { // TODO do some error handling shit with all these methods at some point
+    disableAlarm();
+    tcb *old = scheduler->curr;
+    scheduler->curr = ((tcb*) queue_dequeue(scheduler->s_queue));
+    queue_enqueue((void*) old, scheduler->s_queue);
+    setAlarm();
+    swapcontext(&old->context, &scheduler->curr->context);
+
     return 0;
 };
 
