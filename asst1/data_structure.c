@@ -31,6 +31,7 @@ void queue_enqueue(void * element, queue * q) {
 
 void * queue_dequeue(queue * q) {
     if (isEmpty(q)) {
+        puts("I HAVE NOTHING!");
         return NULL;
     } else {
         void * data = q->head->data;

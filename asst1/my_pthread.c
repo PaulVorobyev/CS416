@@ -46,11 +46,19 @@ void alrm_handler(int signo) {
     disableAlarm();
     printf("SWITCH! - %d\n", timesSwitched++);
     tcb *old = scheduler->curr;
-    scheduler->curr = ((tcb*) queue_dequeue(scheduler->s_queue));
-    queue_enqueue((void*) old, scheduler->s_queue);
-    printf("END SWITCH! - %d\n", timesSwitched++);
-    setAlarm();
-    swapcontext(&old->context, &scheduler->curr->context);
+    scheduler->curr =  ((tcb*) queue_dequeue(scheduler->s_queue));
+    if (!scheduler->curr) { // all we got left is main
+        scheduler->curr = old;
+        puts("MAIN IS ONLY THREAD LEFT!");
+    } else {
+        queue_enqueue((void*) old, scheduler->s_queue);
+        printf("END SWITCH! - %d\n", timesSwitched++);
+        setAlarm();
+        swapcontext(&old->context, &scheduler->curr->context);
+    }
+    //printf("END SWITCH! - %d\n", timesSwitched++);
+    //setAlarm();
+    //swapcontext(&old->context, &scheduler->curr->context);
     //pthread_sigmask(SIG_UNBLOCK, &set, NULL);
         //scheduler->curr->context = t_old->context;
         //queue_enqueue((void *) scheduler->curr, scheduler->s_queue);
@@ -76,7 +84,7 @@ void sched_init() { // initializes global scheduler variable
     } else {
         scheduler = (sched *) malloc(sizeof(sched));
         scheduler->timerSet = 0;
-        scheduler->interval = 25;
+        scheduler->interval = 50;
         scheduler->s_queue = queue_init();
         scheduler->terminated = queue_init();
         scheduler->mainThreadCreated = 0;
@@ -95,12 +103,21 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
     tcb * t = tcb_init(); // thread to be created
     tcb * curr;
 
+    // make pthread_exit() thread for uc link
+    ucontext_t *exit_link = (ucontext_t*) malloc(sizeof(ucontext_t));
+    getcontext(exit_link);
+    exit_link->uc_stack.ss_sp = malloc(MEM);
+    exit_link->uc_stack.ss_size = MEM;
+    exit_link->uc_stack.ss_flags = 0;
+    exit_link->uc_link = 0;
+    makecontext(exit_link, my_pthread_exit, 1, 1);
+
     // create new thread
     getcontext(&(t->context));
     t->context.uc_stack.ss_sp = malloc(MEM);
     t->context.uc_stack.ss_size = MEM;
     t->context.uc_stack.ss_flags = 0;
-    //t->context.uc_link = 0;
+    t->context.uc_link = exit_link;
     // TODO uc_link
     makecontext(&(t->context), function, 0);
     // reset the new thread's signal blocker
@@ -141,11 +158,18 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
 /* give CPU pocession to other user level threads voluntarily */
 int my_pthread_yield() { // TODO do some error handling shit with all these methods at some point
     disableAlarm();
+    puts("YIELD!");
     tcb *old = scheduler->curr;
-    scheduler->curr = ((tcb*) queue_dequeue(scheduler->s_queue));
-    queue_enqueue((void*) old, scheduler->s_queue);
-    setAlarm();
-    swapcontext(&old->context, &scheduler->curr->context);
+    scheduler->curr =  ((tcb*) queue_dequeue(scheduler->s_queue));
+    if (!scheduler->curr) { // all we got left is main
+        scheduler->curr = old;
+        puts("MAIN IS ONLY THREAD LEFT!");
+    } else {
+        queue_enqueue((void*) old, scheduler->s_queue);
+        printf("END SWITCH! - %d\n", timesSwitched++);
+        setAlarm();
+        swapcontext(&old->context, &scheduler->curr->context);
+    }
 
     return 0;
 };
@@ -153,6 +177,7 @@ int my_pthread_yield() { // TODO do some error handling shit with all these meth
 /* terminate a thread */
 void my_pthread_exit(void *value_ptr) {
     disableAlarm();
+    puts("hiya from exit!");
 
     tcb * t = scheduler->curr;
     t->retval = value_ptr;
