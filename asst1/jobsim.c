@@ -212,18 +212,26 @@ void test_queue() {
     }
 }
 
-void foo() {
+void *foo() {
     int i = 0;
-    for (i = 0; i < 200; i++) {
+    for (i = 0; i < 2000; i++) {
         printf("foo! %d\n", i);
     }
+
+    int * result = (int*) malloc(sizeof(int));
+    *result = 1;
+    return (void*) result;
 }
 
-void bar() {
+void *bar() {
     int i = 0;
-    for (i = 0; i < 200; i++) {
+    for (i = 0; i < 2000; i++) {
         printf("bar! %d\n", i);
     }
+
+    int * result = (int*) malloc(sizeof(int));
+    *result = 2;
+    return (void*) result;
 }
 
 int main(int argc, char* argv[]) {

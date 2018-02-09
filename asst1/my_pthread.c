@@ -84,13 +84,20 @@ void sched_init() { // initializes global scheduler variable
     } else {
         scheduler = (sched *) malloc(sizeof(sched));
         scheduler->timerSet = 0;
-        scheduler->interval = 50;
+        scheduler->interval = 200;
         scheduler->s_queue = queue_init();
         scheduler->terminated = queue_init();
         scheduler->mainThreadCreated = 0;
         
         return;
     }
+}
+
+/* runs a thread function and call pthread_exit with its ret_val */
+void thread_runner(void *(*function)(void*), void *arg) {
+    void *ret_val = function(arg);
+    printf("DONEZO: %d", *((int*)ret_val));
+    my_pthread_exit(ret_val);
 }
 
 /* create a new thread */
@@ -103,6 +110,7 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
     tcb * t = tcb_init(); // thread to be created
     tcb * curr;
 
+    // TODO: this block currently does nothing
     // make pthread_exit() thread for uc link
     ucontext_t *exit_link = (ucontext_t*) malloc(sizeof(ucontext_t));
     getcontext(exit_link);
@@ -117,9 +125,8 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
     t->context.uc_stack.ss_sp = malloc(MEM);
     t->context.uc_stack.ss_size = MEM;
     t->context.uc_stack.ss_flags = 0;
-    t->context.uc_link = exit_link;
-    // TODO uc_link
-    makecontext(&(t->context), function, 0);
+    t->context.uc_link = 0;
+    makecontext(&(t->context), thread_runner, 2, function, arg);
     // reset the new thread's signal blocker
     //sigemptyset(&(t->context.uc_sigmask));
 
@@ -186,6 +193,7 @@ void my_pthread_exit(void *value_ptr) {
     queue_enqueue(t, &(scheduler->terminated));
     scheduler->curr = (tcb *) queue_dequeue(scheduler->s_queue);
     setAlarm();
+    puts("LEAVING EXIT");
     setcontext(&scheduler->curr->context);
 };
 
