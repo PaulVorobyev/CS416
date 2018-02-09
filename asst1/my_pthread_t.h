@@ -36,6 +36,7 @@ typedef struct threadControlBlock {
     my_pthread_t id;
     ucontext_t context;
     state_t state;
+    void * retval; // supplied to pthread_exit
 } tcb;
 
 /* Scheduler state struct */
@@ -43,6 +44,7 @@ typedef struct scheduler {
     int timerSet; // 0 = false, 1 = true
     int interval; // time in microseconds for alarm to go off
     queue * s_queue; // scheduling queue
+    queue * terminated; // TODO merge with s_queue or make this a different ds
     tcb * curr; // current thread
     int mainThreadCreated; // TODO remove this stupid flag
 } sched;

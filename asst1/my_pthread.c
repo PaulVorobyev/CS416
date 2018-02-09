@@ -44,20 +44,7 @@ tcb * tcb_init() {
 void alrm_handler(int signo) {
 //void alrm_handler(int signo, siginfo_t* siginfo, void* context) {
     disableAlarm();
-    //pthread_sigmask(SIG_BLOCK, &set, NULL);
     printf("SWITCH! - %d\n", timesSwitched++);
-    //tcb * t_old = tcb_init();
-    //memcpy((void*)&t_old->context, context, sizeof(ucontext_t));
-    //t_old->context.uc_stack.ss_sp = malloc(t_old->context.uc_stack.ss_size);
-    //memcpy((void*)t_old->context.uc_stack.ss_sp, ((ucontext_t*) context)->uc_stack.ss_sp, t_old->context.uc_stack.ss_size);
-    /*if (!scheduler->mainThreadCreated) { 
-        scheduler->mainThreadCreated = 1;
-        scheduler->curr = ((tcb*) queue_dequeue(scheduler->s_queue));
-        setcontext(&scheduler->curr->context);
-        //t_old->context = *((ucontext_t *) context);
-        //queue_enqueue((void *) t_old, scheduler->s_queue);
-    }*/
-    //else {
     tcb *old = scheduler->curr;
     scheduler->curr = ((tcb*) queue_dequeue(scheduler->s_queue));
     queue_enqueue((void*) old, scheduler->s_queue);
@@ -91,6 +78,7 @@ void sched_init() { // initializes global scheduler variable
         scheduler->timerSet = 0;
         scheduler->interval = 25;
         scheduler->s_queue = queue_init();
+        scheduler->terminated = queue_init();
         scheduler->mainThreadCreated = 0;
         
         return;
@@ -152,11 +140,21 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
 
 /* give CPU pocession to other user level threads voluntarily */
 int my_pthread_yield() {
-	return 0;
+    return 0;
 };
 
 /* terminate a thread */
 void my_pthread_exit(void *value_ptr) {
+    disableAlarm();
+
+    tcb * t = scheduler->curr;
+    t->retval = value_ptr;
+    t->state = Terminated;
+
+    queue_enqueue(t, &(scheduler->terminated));
+    scheduler->curr = (tcb *) queue_dequeue(scheduler->s_queue);
+    setAlarm();
+    setcontext(&scheduler->curr->context);
 };
 
 /* wait for thread termination */
