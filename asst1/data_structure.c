@@ -10,8 +10,8 @@ queue * queue_init() {
     return q;
 }
 
+// add node
 void queue_enqueue(void * element, queue * q) {
-    
     if(isEmpty(q)) {
         // 1 element means rear and head are the same
         q->head = n;
@@ -29,12 +29,13 @@ void queue_enqueue(void * element, queue * q) {
     q->size += 1;
 }
 
+// return node
 void * queue_dequeue(queue * q) {
     if (isEmpty(q)) {
         puts("I HAVE NOTHING!");
         return NULL;
     } else {
-        void * data = q->head->data;
+        void * data = q->head;
 
         if (q->head->next == NULL) { // only 1
             q->head = NULL;
@@ -68,21 +69,21 @@ void init_job(void * element, multi_queue * m_q){
     node * n = (node *) malloc(sizeof(node));
     n->data = element;
     n->state = Ready;
+    n->p_level = -1;
 
-    add_job(n, m_q->q_arr);
+    add_job(n, m_q);
 }
 
 // Assume element is always NODE
 void add_job(void * element, multi_queue * m_q){
-    if(element->data->p_level == m_q->num_levels-1){
-        // if on last level
-        queue_enqueue(element, q_arr[element->data->p_level]);
-    }else if{
-        // if waiting on mutex, put back on same level
-        queue_enqueue(element, q_arr[element->data->p_level]);
+    int curr_level = element->p_level;
+
+    // if on last level or if waiting on mutex, then put on same level
+    if(curr_level == m_q->num_levels-1 || element->state == Waiting){
+        queue_enqueue(element, m_q->q_arr[curr_level]);
     }else{
         // add job to next level down
-        queue_enqueue(element, q_arr[element->data->p_level+1]);
+        queue_enqueue(element, m_q->q_arr[curr_level+1]);
     }
 }
 
@@ -90,8 +91,14 @@ void * get_next_job(){
     return 0;
 }
 
-int is_empty_mqueue(){ 
-    return 0;
+int is_empty_m_queue(multi_queue * m_q){ 
+    int i;
+    for(i = 0; i < m_q->num_levels; i++){
+        if(!isEmpty(m_q->q_arr[i])){
+            return 0;
+        }
+    }
+    return 1;
 
 }
 

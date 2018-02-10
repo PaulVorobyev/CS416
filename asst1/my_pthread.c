@@ -86,7 +86,8 @@ void sched_init() { // initializes global scheduler variable
         scheduler = (sched *) malloc(sizeof(sched));
         scheduler->timerSet = 0;
         scheduler->interval = 200;
-        scheduler->s_queue = queue_init();
+        // number of levels in q, time_delta between intervals per level, start interval
+        scheduler->q_queue = m_queue_init(5, 10, scheduler->interval);
         scheduler->terminated = queue_init();
         scheduler->mainThreadCreated = 0;
         
