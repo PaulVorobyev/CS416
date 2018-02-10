@@ -37,6 +37,7 @@ tcb * tcb_init() {
     tcb * t = (tcb * ) malloc(sizeof(tcb));
     t->id = (int) t; // set id = to address for utility
     getcontext(&(t->context));
+    t->p_level = -1;
     t->state = 0;
     return t;
 }

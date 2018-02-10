@@ -21,6 +21,7 @@
 
 typedef struct queueNode {
     void * data;
+    state_t state;
     struct queueNode * next;
     struct queueNode * prev;
 } node;
@@ -31,12 +32,30 @@ typedef struct queueStructure {
     int size;
 } queue;
 
+typedef struct multiLevelQueue {
+    queue * q_arr;
+    int num_levels;
+    int interval_time_delta;
+    int size;
+    int base_time;
+} multi_queue;
+
 /* Method definitions */
 
 // Queue
 queue * queue_init();
 void queue_enqueue(void * element, queue * q);
 void * queue_dequeue(queue * q);
-int isEmpty(queue * q);
+int isEmpty(queue * q)
+
+// Multi level queue 
+multi_queue * m_queue_init(int num_levels, int time_delta, int base_time);
+void init_job(void * element, multi_queue * m_q);
+void add_job(void * element, multi_queue * m_q);
+void * get_next_job();
+int is_empty_mqueue();
+int get_interval_time(int level);
+
+
 
 #endif

@@ -33,6 +33,7 @@ typedef enum State {
 } state_t;
 
 typedef struct threadControlBlock {
+    int p_level; //priority level that it's on
     my_pthread_t id;
     ucontext_t context;
     state_t state;
