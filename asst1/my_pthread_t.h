@@ -43,7 +43,7 @@ typedef struct threadControlBlock {
 typedef struct scheduler {
     int timerSet; // 0 = false, 1 = true
     int interval; // time in microseconds for alarm to go off
-    multi_queue * q_queue; // scheduling queue
+    multi_queue * m_queue; // scheduling queue
     queue * terminated; // TODO merge with s_queue or make this a different ds
     tcb * curr; // current thread
     int mainThreadCreated; // TODO remove this stupid flag

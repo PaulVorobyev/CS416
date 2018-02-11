@@ -17,6 +17,14 @@
 
 /* Struct definitions */
 
+typedef enum State {
+    Running,
+    Ready,
+    Terminated,
+    Waiting,
+    Locking
+} state_t;
+
 // Queue
 
 typedef struct queueNode {
@@ -34,7 +42,7 @@ typedef struct queueStructure {
 } queue;
 
 typedef struct multiLevelQueue {
-    queue * q_arr;
+    queue ** q_arr;
     int num_levels;
     int interval_time_delta;
     int size;
@@ -47,15 +55,18 @@ typedef struct multiLevelQueue {
 queue * queue_init();
 void queue_enqueue(void * element, queue * q);
 void * queue_dequeue(queue * q);
-int isEmpty(queue * q)
+void * peek(queue * q);
+void cycle_next_ele(queue * q);
+int isEmpty(queue * q);
 
 // Multi level queue 
 multi_queue * m_queue_init(int num_levels, int time_delta, int base_time);
 void init_job(void * element, multi_queue * m_q);
-void add_job(void * element, multi_queue * m_q);
-void * get_next_job();
+void add_job(node * element, multi_queue * m_q);
+void * get_next_job(multi_queue * m_q);
 int is_empty_m_queue(multi_queue * m_q);
-int get_interval_time(int level);
+int get_interval_time(int level, multi_queue * m_q);
+void cleanup_m_queue(multi_queue * m_q);
 
 
 

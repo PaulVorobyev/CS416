@@ -212,6 +212,32 @@ void test_queue() {
     }
 }
 
+void print_mq(multi_queue * m_q){
+    int i;
+    for(i = 0; i < m_q->num_levels; i++){
+        queue * q = m_q->q_arr[i];
+        while(!isEmpty(q)){
+            printf("%d\n", *((int *) queue_dequeue(q)));
+        }
+    }
+}
+
+void test_m_queue(){
+    int i;
+    multi_queue * m_q = m_queue_init(5, 10, 50);
+    for(i = 0; i < 3; i++){
+        int * j = malloc(sizeof(int));
+        *j = i;
+        init_job(j, m_q);
+    }
+    
+    for(i = 0; i < 5; i++){
+        print_mq(m_q);
+        add_job( get_next_job(m_q), m_q);
+    }
+}
+
+
 void *foo() {
     int i = 0;
     for (i = 0; i < 2000; i++) {

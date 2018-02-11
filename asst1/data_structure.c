@@ -10,8 +10,13 @@ queue * queue_init() {
     return q;
 }
 
-// add node
 void queue_enqueue(void * element, queue * q) {
+    /*
+     * @params:
+     *      - element (assume always node *)
+     *      - q (single queue)
+     */
+    node * n = (node *) element;
     if(isEmpty(q)) {
         // 1 element means rear and head are the same
         q->head = n;
@@ -31,6 +36,12 @@ void queue_enqueue(void * element, queue * q) {
 
 // return node
 void * queue_dequeue(queue * q) {
+    /*
+     * @params: a single queue (queue *)
+     *
+     * @return:
+     *      the first node in queue
+     */
     if (isEmpty(q)) {
         puts("I HAVE NOTHING!");
         return NULL;
@@ -50,6 +61,15 @@ void * queue_dequeue(queue * q) {
     }
 }
 
+void * peek(queue * q){
+    if (isEmpty(q)) {
+        puts("I HAVE NOTHING!");
+        return NULL;
+    } else {
+        return q->head;
+    }
+}
+
 int isEmpty(queue * q) {
     return q->size == 0;
 }
@@ -57,14 +77,25 @@ int isEmpty(queue * q) {
 /* Multi Level Queue Functions */
 
 multi_queue * m_queue_init(int num_levels, int time_delta, int base_time){
+    // Create queue array
+    int i;
+    queue ** s_q = (queue *) malloc(num_levels * sizeof(queue));
+    for(i = 0; i < num_levels; i++){
+        s_q[i] = queue_init();
+    }
+    
+    // Create multi level q
     multi_queue * q = (multi_queue *) malloc(sizeof(multi_queue));
-    q->q_arr = (queue *) malloc(sizeof(queue*num_levels));
+    q->q_arr = s_q;
+    q->num_levels = num_levels;
     q->interval_time_delta = time_delta;
+    q->size = 0;
     q->base_time = base_time;
 
     return q;
 }
 
+// Assume element is always TCB
 void init_job(void * element, multi_queue * m_q){
     node * n = (node *) malloc(sizeof(node));
     n->data = element;
@@ -75,7 +106,7 @@ void init_job(void * element, multi_queue * m_q){
 }
 
 // Assume element is always NODE
-void add_job(void * element, multi_queue * m_q){
+void add_job(node * element, multi_queue * m_q){
     int curr_level = element->p_level;
 
     // if on last level or if waiting on mutex, then put on same level
@@ -85,31 +116,44 @@ void add_job(void * element, multi_queue * m_q){
         // add job to next level down
         queue_enqueue(element, m_q->q_arr[curr_level+1]);
     }
+
+    m_q->size += 1;
 }
 
-void * get_next_job(){
-    return 0;
+void * get_next_job(multi_queue * m_q){
+    if(is_empty_m_queue(m_q)){
+        return 0;
+    }
+
+    int i;
+    queue * q;
+    node * n;
+    for(i = 0; i < m_q->num_levels; i++){
+        q = m_q->q_arr[i];
+        if(!isEmpty(q)){
+            n = queue_dequeue(q);
+            m_q->size -= 1;
+        }
+    }
+    return n;
 }
 
 int is_empty_m_queue(multi_queue * m_q){ 
-    int i;
-    for(i = 0; i < m_q->num_levels; i++){
-        if(!isEmpty(m_q->q_arr[i])){
-            return 0;
-        }
-    }
-    return 1;
-
+    return m_q->size == 0;
 }
 
 int get_interval_time(int level, multi_queue * m_q){
     return m_q->base_time + (m_q->interval_time_delta * level);
 }
 
-void cleanup_m_queue(multi_queue * q){
-    free(q->queue_arr);
-    free(q);
+void cleanup_m_queue(multi_queue * m_q){
+    int i;
+    for(i = 0; i < m_q->num_levels; i++){
+        free(m_q->q_arr[i]);
+    }
 
+    free(m_q->q_arr);
+    free(m_q);
 }
 
 
