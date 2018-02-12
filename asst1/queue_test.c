@@ -219,7 +219,7 @@ void print_mq(multi_queue * m_q){
         queue * q = m_q->q_arr[i];
         printf("level: %d\n", i);
         while(!isEmpty(q)){
-            printf("%d", *((int *) ((node *)queue_dequeue(q))->data));
+            printf("%d", *((int *) queue_dequeue(q)));
         }
         printf("\n");
     }
@@ -229,15 +229,21 @@ void test_m_queue(){
     int i;
     multi_queue * m_q = m_queue_init(3, 10, 50);
     for(i = 0; i < 3; i++){
-        int * j = malloc(sizeof(int));
-        *j = i;
-        init_job(j, m_q);
+        int * n = malloc(sizeof(int));
+        *n = i;
+
+        tcb * j = malloc(sizeof(tcb));
+        j->retval = (int *) n;
+        j->p_level = -1;
+        add_job(j, m_q);
     }
     
-    for(i = 0; i < 9; i++){
+    for(i = 0; i < 10; i++){
         printf("apples--------------\n");
         //print_mq(m_q);
-        node * n = (node * ) get_next_job(m_q);
+        tcb * n = (tcb * ) get_next_job(m_q);
+        printf("poop\n");
+        printf("item to dequeue: %d\n", *((int *)(n->retval)));
         add_job(n, m_q);
     }
 }

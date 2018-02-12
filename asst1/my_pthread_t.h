@@ -17,12 +17,12 @@
 #include <sys/syscall.h>
 #include <stdio.h>
 #include <signal.h>
-#include <sys/ucontext.h>
+//#include <sys/ucontext.h>
 #include "data_structure.h"
 
 /* State and TCB */
 
-typedef uint my_pthread_t;
+//typedef uint my_pthread_t;
 
 typedef enum State {
     Running,
@@ -32,12 +32,15 @@ typedef enum State {
     Locking
 } state_t;
 
+/*
 typedef struct threadControlBlock {
     my_pthread_t id;
+    int p_level; //priority level
     ucontext_t context;
     state_t state;
     void * retval; // supplied to pthread_exit
 } tcb;
+*/
 
 /* Scheduler state struct */
 typedef struct scheduler {

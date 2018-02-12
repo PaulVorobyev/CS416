@@ -16,7 +16,9 @@ void queue_enqueue(void * element, queue * q) {
      *      - element (assume always node *)
      *      - q (single queue)
      */
-    node * n = (node *) element;
+    node * n = (node *) malloc(sizeof(node));
+    n->data = element;
+
     if(isEmpty(q)) {
         // 1 element means rear and head are the same
         q->head = n;
@@ -46,8 +48,7 @@ void * queue_dequeue(queue * q) {
         puts("I HAVE NOTHING!");
         return NULL;
     } else {
-        void * n = q->head;
-        printf("item to dequeue: %d\n", *((int *) ((node *)n)->data));
+        void * data = q->head->data;
 
         if (q->head->next == NULL) { // only 1
             q->head = NULL;
@@ -58,7 +59,7 @@ void * queue_dequeue(queue * q) {
 
         q->size -= 1;
         
-        return n;
+        return data;
     }
 }
 
@@ -97,6 +98,7 @@ multi_queue * m_queue_init(int num_levels, int time_delta, int base_time){
 }
 
 // Assume element is always TCB
+/*
 void init_job(void * element, multi_queue * m_q){
     node * n = (node *) malloc(sizeof(node));
     n->data = element;
@@ -105,10 +107,12 @@ void init_job(void * element, multi_queue * m_q){
 
     add_job(n, m_q);
 }
+*/
 
-// Assume element is always NODE
-void add_job(node * element, multi_queue * m_q){
-    int curr_level = element->p_level;
+// Assume element is always TCB
+void add_job(void * element, multi_queue * m_q){
+    int curr_level = ((tcb *)element)->p_level;
+
     printf ("curr_level: %d\n", curr_level);
 
     // if on last level, then put on same level
@@ -119,7 +123,7 @@ void add_job(node * element, multi_queue * m_q){
         // add job to next level down
         printf("Add next level\n");
         queue_enqueue(element, m_q->q_arr[curr_level+1]);
-        element->p_level += 1;
+        ((tcb *)element)->p_level += 1;
     }else{
         printf("ERROR! You're an idiot\n");
     }
@@ -134,17 +138,17 @@ void * get_next_job(multi_queue * m_q){
 
     int i;
     queue * q;
-    node * n;
+    void * data;
     for(i = 0; i < m_q->num_levels; i++){
         q = m_q->q_arr[i];
         if(!isEmpty(q)){
             printf("Grab from queue at level %d\n", i);
-            n = queue_dequeue(q);
+            data = queue_dequeue(q);
             m_q->size -= 1;
             break;
         }
     }
-    return n;
+    return data;
 }
 
 int is_empty_m_queue(multi_queue * m_q){ 
