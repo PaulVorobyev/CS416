@@ -1,5 +1,7 @@
 #include "data_structure.h"
 
+/* Queue method implementations */
+
 queue * queue_init() {
     queue * q = (queue *) malloc(sizeof(queue));
     q->head = q->rear = NULL;
@@ -51,4 +53,50 @@ void * queue_dequeue(queue * q) {
 
 int isEmpty(queue * q) {
     return q->size == 0;
+}
+
+/* Hashtable method implementations */
+
+hash_table * hash_init() {
+    hash_table * h = (hash_table *) malloc(sizeof(hash_table));
+    h->size = 100;
+    h->elements = malloc(sizeof(queue *) * (h->size + 1));
+    h->hash = &hash_mod;
+
+    // initialize all queue chains
+    int i = 0;
+    while (i < h->size) {
+        h->elements[i] = queue_init();
+        i++;
+    }
+    return h;
+}
+
+static int hash_mod(int id, int size) {
+    return id % size;
+}
+
+void hash_insert(hash_table * h, void * t, int id) {
+    int idx = h->hash(id, h->size);
+    queue * q  = h->elements[idx];
+    entry * e = (entry *) malloc(sizeof(entry));
+    e->data = t;
+    e->id = id;
+    queue_enqueue(e, q);
+    return;
+}
+
+void * hash_find(hash_table *h, int id) {
+    int idx = h->hash(id, h->size);
+    node * n  = h->elements[idx]->head;
+    entry * e = (entry *) n->data;
+    void * t = NULL;
+    while (n != NULL) {
+        if (e->id == id) {
+            t = e->data;
+            break;
+        }
+        n = n->next;
+    }
+    return t;
 }
