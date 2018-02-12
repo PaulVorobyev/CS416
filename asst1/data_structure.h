@@ -14,16 +14,9 @@
 
 #include <stdlib.h>
 #include <sys/types.h>
+#include "general.h"
 
 /* Struct definitions */
-
-typedef enum State {
-    Running,
-    Ready,
-    Terminated,
-    Waiting,
-    Locking
-} state_t;
 
 // Queue
 

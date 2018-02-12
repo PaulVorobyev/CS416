@@ -46,7 +46,8 @@ void * queue_dequeue(queue * q) {
         puts("I HAVE NOTHING!");
         return NULL;
     } else {
-        void * data = q->head;
+        void * n = q->head;
+        printf("item to dequeue: %d\n", *((int *) ((node *)n)->data));
 
         if (q->head->next == NULL) { // only 1
             q->head = NULL;
@@ -57,7 +58,7 @@ void * queue_dequeue(queue * q) {
 
         q->size -= 1;
         
-        return data;
+        return n;
     }
 }
 
@@ -108,13 +109,19 @@ void init_job(void * element, multi_queue * m_q){
 // Assume element is always NODE
 void add_job(node * element, multi_queue * m_q){
     int curr_level = element->p_level;
+    printf ("curr_level: %d\n", curr_level);
 
-    // if on last level or if waiting on mutex, then put on same level
-    if(curr_level == m_q->num_levels-1 || element->state == Waiting){
+    // if on last level, then put on same level
+    if(curr_level == m_q->num_levels-1){
+        printf("Add same level\n");
         queue_enqueue(element, m_q->q_arr[curr_level]);
-    }else{
+    }else if (curr_level < m_q->num_levels-1){
         // add job to next level down
+        printf("Add next level\n");
         queue_enqueue(element, m_q->q_arr[curr_level+1]);
+        element->p_level += 1;
+    }else{
+        printf("ERROR! You're an idiot\n");
     }
 
     m_q->size += 1;
@@ -131,8 +138,10 @@ void * get_next_job(multi_queue * m_q){
     for(i = 0; i < m_q->num_levels; i++){
         q = m_q->q_arr[i];
         if(!isEmpty(q)){
+            printf("Grab from queue at level %d\n", i);
             n = queue_dequeue(q);
             m_q->size -= 1;
+            break;
         }
     }
     return n;

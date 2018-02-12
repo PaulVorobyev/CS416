@@ -21,8 +21,9 @@
 #include <string.h>
 #include <sys/time.h>
 #include <math.h>
-#include "my_pthread_t.h"
+#include "data_structure.h"
 
+/*
 typedef struct job {
     int startAfter;
     int duration;
@@ -39,14 +40,14 @@ int jobCmp(const void *a, const void *b) {
     return ((job*) *((job**) a))->startAfter - ((job*) *((job**) b))->startAfter;
 }
 
-/*
+
  * parses input txt files and populates job array
  *
  * job - ptr to an array of job pointers. populates this
  * array with jobs
  *
  * return - len of job array
- */
+ 
 int parseJobList(const char *filename, job ***jobsPtr) {
     FILE *fp = fopen(filename, "r");
     char *line = NULL;
@@ -92,12 +93,12 @@ void printBenchmarks(job **jobs, int jobsLen) {
     }
 }
 
-/*
+
  * simulation of a job.
  *
  * duration - how many seconds it should run for
  * numIOs - number of times it should yield
- */
+ 
 void *runJob(int duration, int numIOs) {
     struct timeval startTime;
     struct timeval endTime;
@@ -125,9 +126,9 @@ void *runJob(int duration, int numIOs) {
     return (void*) runtime;
 }
 
-/*
+
  * free memory from main
- */
+ 
 void cleanup(job **jobs, int jobsLen) {
     int i = 0;
     
@@ -137,10 +138,10 @@ void cleanup(job **jobs, int jobsLen) {
     free(jobs);
 }
 
-/*
+
  * runs jobs and updates job structs with
  * runtime stats
- */
+ 
 void runSim(job **jobs, int jobsLen) {
     // sort jobs by start time
     qsort((void*)jobs, jobsLen, sizeof(job*), jobCmp);
@@ -211,33 +212,37 @@ void test_queue() {
         printf("%d\n", *((int *) queue_dequeue(q)));
     }
 }
-
+*/
 void print_mq(multi_queue * m_q){
     int i;
     for(i = 0; i < m_q->num_levels; i++){
         queue * q = m_q->q_arr[i];
+        printf("level: %d\n", i);
         while(!isEmpty(q)){
-            printf("%d\n", *((int *) queue_dequeue(q)));
+            printf("%d", *((int *) ((node *)queue_dequeue(q))->data));
         }
+        printf("\n");
     }
 }
 
 void test_m_queue(){
     int i;
-    multi_queue * m_q = m_queue_init(5, 10, 50);
+    multi_queue * m_q = m_queue_init(3, 10, 50);
     for(i = 0; i < 3; i++){
         int * j = malloc(sizeof(int));
         *j = i;
         init_job(j, m_q);
     }
     
-    for(i = 0; i < 5; i++){
-        print_mq(m_q);
-        add_job( get_next_job(m_q), m_q);
+    for(i = 0; i < 9; i++){
+        printf("apples--------------\n");
+        //print_mq(m_q);
+        node * n = (node * ) get_next_job(m_q);
+        add_job(n, m_q);
     }
 }
 
-
+/*
 void *foo() {
     int i = 0;
     for (i = 0; i < 2000; i++) {
@@ -259,6 +264,7 @@ void *bar() {
     *result = 2;
     return (void*) result;
 }
+*/
 
 int main(int argc, char* argv[]) {
    printf("START!\n");
