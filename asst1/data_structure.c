@@ -11,11 +11,6 @@ queue * queue_init() {
 }
 
 void queue_enqueue(void * element, queue * q) {
-    /*
-     * @params:
-     *      - element (assume always node *)
-     *      - q (single queue)
-     */
     node * n = (node *) malloc(sizeof(node));
     n->data = element;
 
@@ -36,14 +31,7 @@ void queue_enqueue(void * element, queue * q) {
     q->size += 1;
 }
 
-// return node
 void * queue_dequeue(queue * q) {
-    /*
-     * @params: a single queue (queue *)
-     *
-     * @return:
-     *      the first node in queue
-     */
     if (isEmpty(q)) {
         puts("I HAVE NOTHING!");
         return NULL;
@@ -96,18 +84,6 @@ multi_queue * m_queue_init(int num_levels, int time_delta, int base_time){
 
     return q;
 }
-
-// Assume element is always TCB
-/*
-void init_job(void * element, multi_queue * m_q){
-    node * n = (node *) malloc(sizeof(node));
-    n->data = element;
-    n->state = Ready;
-    n->p_level = -1;
-
-    add_job(n, m_q);
-}
-*/
 
 // Assume element is always TCB
 void add_job(void * element, multi_queue * m_q){

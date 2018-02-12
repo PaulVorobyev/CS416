@@ -53,7 +53,6 @@ int isEmpty(queue * q);
 // Multi level queue 
 multi_queue * m_queue_init(int num_levels, int time_delta, int base_time);
 void init_job(void * element, multi_queue * m_q);
-//void add_job(node * element, multi_queue * m_q);
 void * get_next_job(multi_queue * m_q);
 int is_empty_m_queue(multi_queue * m_q);
 int get_interval_time(int level, multi_queue * m_q);
