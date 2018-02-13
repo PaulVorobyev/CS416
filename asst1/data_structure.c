@@ -89,7 +89,7 @@ multi_queue * m_queue_init(int num_levels, int time_delta, int base_time){
 void add_job(void * element, multi_queue * m_q){
     int curr_level = ((tcb *)element)->p_level;
 
-    printf ("curr_level: %d\n", curr_level);
+    printf ("ADD: curr_level: %d\n", curr_level);
 
     // if on last level, then put on same level
     if(curr_level == m_q->num_levels-1){
@@ -97,9 +97,9 @@ void add_job(void * element, multi_queue * m_q){
         queue_enqueue(element, m_q->q_arr[curr_level]);
     }else if (curr_level < m_q->num_levels-1){
         // add job to next level down
-        printf("Add next level\n");
-        queue_enqueue(element, m_q->q_arr[curr_level+1]);
         ((tcb *)element)->p_level += 1;
+        printf("New level: %d\n", ((tcb *)element)->p_level);
+        queue_enqueue(element, m_q->q_arr[curr_level+1]);
     }else{
         printf("ERROR! You're an idiot\n");
     }
@@ -132,6 +132,9 @@ int is_empty_m_queue(multi_queue * m_q){
 }
 
 int get_interval_time(int level, multi_queue * m_q){
+    if(level < 0){
+        return m_q->base_time;
+    }
     return m_q->base_time + (m_q->interval_time_delta * level);
 }
 

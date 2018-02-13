@@ -24,6 +24,7 @@
 
 //typedef uint my_pthread_t;
 
+/*
 typedef enum State {
     Running,
     Ready,
@@ -32,7 +33,6 @@ typedef enum State {
     Locking
 } state_t;
 
-/*
 typedef struct threadControlBlock {
     my_pthread_t id;
     int p_level; //priority level

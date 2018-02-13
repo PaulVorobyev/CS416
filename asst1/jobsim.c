@@ -212,31 +212,6 @@ void test_queue() {
     }
 }
 
-void print_mq(multi_queue * m_q){
-    int i;
-    for(i = 0; i < m_q->num_levels; i++){
-        queue * q = m_q->q_arr[i];
-        while(!isEmpty(q)){
-            printf("%d\n", *((int *) queue_dequeue(q)));
-        }
-    }
-}
-
-void test_m_queue(){
-    int i;
-    multi_queue * m_q = m_queue_init(5, 10, 50);
-    for(i = 0; i < 3; i++){
-        int * j = malloc(sizeof(int));
-        *j = i;
-        init_job(j, m_q);
-    }
-    
-    for(i = 0; i < 5; i++){
-        print_mq(m_q);
-        add_job( get_next_job(m_q), m_q);
-    }
-}
-
 
 void *foo() {
     int i = 0;
@@ -260,8 +235,42 @@ void *bar() {
     return (void*) result;
 }
 
+void test_m_queue(){
+    int i;
+    multi_queue * m_q = m_queue_init(3, 10, 50);
+    for(i = 0; i < 3; i++){
+        int * n = malloc(sizeof(int));
+        *n = i;
+
+        tcb * j = malloc(sizeof(tcb));
+        j->retval = (int *) n;
+        j->p_level = -1;
+        add_job(j, m_q);
+    }
+    
+    for(i = 0; i < 10; i++){
+        printf("apples--------------\n");
+        //print_mq(m_q);
+        tcb * n = (tcb * ) get_next_job(m_q);
+        printf("poop\n");
+        printf("item to dequeue: %d\n", *((int *)(n->retval)));
+        add_job(n, m_q);
+    }
+}
+
+
 int main(int argc, char* argv[]) {
    printf("START!\n");
-    test_m_queue();
 
+   my_pthread_create(&foo, NULL);
+    printf("MAIN RUNNING!\n");
+   
+   my_pthread_create(&bar, NULL);
+    
+   int i;
+   for(i = 0; i < 3000; i++){
+       printf("MAIN RUNNING!\n");
+   }
+
+   puts("broooo");
 }
