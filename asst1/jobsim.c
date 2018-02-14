@@ -197,34 +197,6 @@ void runSim(job **jobs, int jobsLen) {
     free(threadArgs);
 }
 
-void test_queue() {
-    queue * q = queue_init();
-    int i = 0;
-    for (i = 0; i < 10; i++) {
-        int * j = malloc(sizeof(int));
-        *j = i;
-        queue_enqueue(j, q);
-    }
-    
-    for (i = 0; i < 10; i++) {
-        printf("%d\n", *((int *) queue_dequeue(q)));
-    }
-}
-
-void test_hash() {
-    hash_table * h = hash_init();
-    int i = 0;
-    for (i = 0; i < 10; i++) {
-        int * j = malloc(sizeof(int));
-        *j = i;
-        hash_insert(h, j, *j);
-    }
-    
-    for (i = 0; i < 10; i++) {
-        printf("%d\n", *((int *) hash_find(h, i)));
-    }
-}
-
 void *foo() {
     int i = 0;
     for (i = 0; i < 2000; i++) {
@@ -247,42 +219,59 @@ void *bar() {
     return (void*) result;
 }
 
-/*void test_m_queue(){
-    int i;
-    multi_queue * m_q = m_queue_init(3, 10, 50);
-    for(i = 0; i < 3; i++){
-        int * n = malloc(sizeof(int));
-        *n = i;
+void test_queue() {
+    puts("START TEST QUEUE");
 
-        tcb * j = malloc(sizeof(tcb));
-        j->retval = (int *) n;
-        j->p_level = -1;
-        add_job(j, m_q);
+    queue * q = queue_init();
+    int i = 0;
+    for (i = 0; i < 10; i++) {
+        int * j = malloc(sizeof(int));
+        *j = i;
+        queue_enqueue(j, q);
     }
     
-    for(i = 0; i < 10; i++){
-        printf("apples--------------\n");
-        //print_mq(m_q);
-        tcb * n = (tcb * ) get_next_job(m_q);
-        printf("poop\n");
-        printf("item to dequeue: %d\n", *((int *)(n->retval)));
-        add_job(n, m_q);
+    for (i = 0; i < 10; i++) {
+        printf("%d\n", *((int *) queue_dequeue(q)));
     }
-}*/
 
+    puts("END TEST QUEUE");
+}
+
+void test_hash() {
+    puts("START TEST HASH");
+
+    hash_table * h = hash_init();
+    int i = 0;
+    for (i = 0; i < 10; i++) {
+        int * j = malloc(sizeof(int));
+        *j = i;
+        hash_insert(h, j, *j);
+    }
+    
+    for (i = 0; i < 10; i++) {
+        printf("%d\n", *((int *) hash_find(h, i)));
+    }
+
+    puts("END TEST HASH");
+}
+
+void test_m_queue(){
+    puts("START TEST M_QUEUE");
+
+    puts("SPAWN TWO THREADS");
+    my_pthread_create(&foo, NULL);
+    my_pthread_create(&bar, NULL);
+
+    int i = 0;
+    for (; i < 5; i++) {
+        my_pthread_yield();
+    }
+
+    puts("END TEST M_QUEUE");
+}
 
 int main(int argc, char* argv[]) {
-   printf("START!\n");
-
-   my_pthread_create(&foo, NULL);
-    printf("MAIN RUNNING!\n");
-   
-   my_pthread_create(&bar, NULL);
-    
-   int i;
-   for(i = 0; i < 3000; i++){
-       printf("MAIN RUNNING!\n");
-   }
-
-   puts("broooo");
+    test_m_queue();
+    test_hash();
+    test_queue();
 }
