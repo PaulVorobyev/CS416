@@ -10,33 +10,60 @@
 
 #define _GNU_SOURCE
 
+#define MEM 64000
+
 /* include lib header files that you need here: */
 #include <unistd.h>
 #include <sys/syscall.h>
-#include <sys/types.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <signal.h>
+//#include <sys/ucontext.h>
+#include "data_structure.h"
 
-typedef uint my_pthread_t;
+/* State and TCB */
+
+//typedef uint my_pthread_t;
+
+/*
+typedef enum State {
+    Running,
+    Ready,
+    Terminated,
+    Waiting,
+    Locking
+} state_t;
 
 typedef struct threadControlBlock {
-	/* add something here */
-} tcb; 
+    my_pthread_t id;
+    int p_level; //priority level
+    ucontext_t context;
+    state_t state;
+    void * retval; // supplied to pthread_exit
+} tcb;
+*/
+
+/* Scheduler state struct */
+typedef struct scheduler {
+    int timerSet; // 0 = false, 1 = true
+    int interval; // time in microseconds for alarm to go off
+    multi_queue * m_queue; // scheduling queue
+    queue * terminated; // TODO merge with s_queue or make this a different ds
+    tcb * curr; // current thread
+    int mainThreadCreated; // TODO remove this stupid flag
+} sched;
 
 /* mutex struct definition */
 typedef struct my_pthread_mutex_t {
 	/* add something here */
 } my_pthread_mutex_t;
 
-/* define your data structures here: */
-
-// Feel free to add your own auxiliary data structures
 
 
-/* Function Declarations: */
+
+/* Scheduling functions */
 
 /* create a new thread */
-int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*function)(void*), void * arg);
+int my_pthread_create(void *(*function)(void*), void * arg);
 
 /* give CPU pocession to other user level threads voluntarily */
 int my_pthread_yield();

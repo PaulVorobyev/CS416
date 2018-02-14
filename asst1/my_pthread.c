@@ -8,18 +8,206 @@
 
 #include "my_pthread_t.h"
 
+/* Globals */
+static sched * scheduler = NULL;
+static sigset_t set;
+int timesSwitched = 0; // TODO temp
+int fuckFlag = 0; // TODO remove this (its for sigset_t)
+
+/* Alarm-related functions */
+
+static void setAlarm() {
+    int interval = get_interval_time(scheduler->curr->p_level, scheduler->m_queue);
+    if (scheduler == NULL) {
+        printf("Error: scheduler not initialized");
+        return;
+    } //else if(scheduler->timerSet == 1) {
+        //printf("Error: timer already set");
+        //return;
+    //}
+
+    scheduler->timerSet = 1;
+    ualarm(interval, interval);
+}
+
+static void disableAlarm() {
+    ualarm(0, 0);
+}
+
+tcb * tcb_init() {
+    tcb * t = (tcb * ) malloc(sizeof(tcb));
+    t->id = (int) t; // set id = to address for utility
+    getcontext(&(t->context));
+    t->p_level = -1;
+    t->state = 0;
+    return t;
+}
+
+void alrm_handler(int signo) {
+//void alrm_handler(int signo, siginfo_t* siginfo, void* context) {
+    disableAlarm();
+    printf("SWITCH! - %d\n", timesSwitched++);
+    tcb *old = scheduler->curr;
+    //scheduler->curr =  ((tcb*) queue_dequeue(scheduler->s_queue));
+    scheduler->curr =  ((tcb*) get_next_job(scheduler->m_queue));
+    if (!scheduler->curr) { // all we got left is main
+        scheduler->curr = old;
+        puts("MAIN IS ONLY THREAD LEFT!");
+    } else {
+        //queue_enqueue((void*) old, scheduler->s_queue);
+        add_job((void*) old, scheduler->m_queue);
+        printf("END SWITCH! - %d\n", timesSwitched++);
+        setAlarm();
+        swapcontext(&old->context, &scheduler->curr->context);
+    }
+    //printf("END SWITCH! - %d\n", timesSwitched++);
+    //setAlarm();
+    //swapcontext(&old->context, &scheduler->curr->context);
+    //pthread_sigmask(SIG_UNBLOCK, &set, NULL);
+        //scheduler->curr->context = t_old->context;
+        //queue_enqueue((void *) scheduler->curr, scheduler->s_queue);
+    //}
+    
+
+
+    // see if curr is still running or over?
+    // if (still running) { re-queue }
+    //
+    // then dequeue next tcb, set sched->curr, and setcontext on it
+    //tcb * t = (tcb *) queue_dequeue(scheduler->s_queue);
+    //scheduler->curr = t;
+    //printf("Thing to be switched into, id: %d\n", t->id);
+    //setcontext(&(t->context));
+}
+
+/* Scheduling functions */
+
+void sched_init() { // initializes global scheduler variable
+    if (scheduler != NULL) {
+        printf("Error: scheduler already created!");
+    } else {
+        scheduler = (sched *) malloc(sizeof(sched));
+        scheduler->timerSet = 0;
+        scheduler->interval = 200;
+        int num_levels = 5;
+        int time_delta = 25;
+        // number of levels in q, time_delta between intervals per level, start interval
+        scheduler->m_queue = m_queue_init(num_levels, time_delta, scheduler->interval);
+        scheduler->terminated = queue_init();
+        scheduler->mainThreadCreated = 0;
+        
+        return;
+    }
+}
+
+/* runs a thread function and call pthread_exit with its ret_val */
+void thread_runner(void *(*function)(void*), void *arg) {
+    void *ret_val = function(arg);
+    printf("DONEZO: %d", *((int*)ret_val));
+    my_pthread_exit(ret_val);
+}
+
 /* create a new thread */
-int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*function)(void*), void * arg) {
-	return 0;
+int my_pthread_create(void *(*function)(void*), void * arg) {
+    disableAlarm();
+    //if (fuckFlag) {
+    //    pthread_sigmask(SIG_BLOCK, &set, NULL);
+    //}
+
+    tcb * t = tcb_init(); // thread to be created
+    tcb * curr;
+
+    // TODO: this block currently does nothing
+    // make pthread_exit() thread for uc link
+    ucontext_t *exit_link = (ucontext_t*) malloc(sizeof(ucontext_t));
+    getcontext(exit_link);
+    exit_link->uc_stack.ss_sp = malloc(MEM);
+    exit_link->uc_stack.ss_size = MEM;
+    exit_link->uc_stack.ss_flags = 0;
+    exit_link->uc_link = 0;
+    makecontext(exit_link, my_pthread_exit, 1, 1);
+
+    // create new thread
+    getcontext(&(t->context));
+    t->context.uc_stack.ss_sp = malloc(MEM);
+    t->context.uc_stack.ss_size = MEM;
+    t->context.uc_stack.ss_flags = 0;
+    t->context.uc_link = 0;
+    makecontext(&(t->context), thread_runner, 2, function, arg);
+    // reset the new thread's signal blocker
+    //sigemptyset(&(t->context.uc_sigmask));
+
+    // should only be executed on first thread create
+    if (scheduler == NULL) { 
+        sched_init();
+        //sigemptyset(&set); // TODO put these in their proper place
+        //sigaddset(&set, SIGALRM);
+        //pthread_sigmask(SIG_BLOCK, &set, NULL);
+        //setAlarm();
+        signal(SIGALRM, alrm_handler);
+        fuckFlag = 1;
+        curr = tcb_init();
+
+        /*tcb * t2 = tcb_init(); */
+        /*t2->context.uc_stack.ss_sp = malloc(MEM);*/
+        /*t2->context.uc_stack.ss_size = MEM;*/
+        /*queue_enqueue((void *) t2, scheduler->s_queue);*/
+        /*getcontext(&(t2->context));*/
+    } else {
+        curr = scheduler->curr;
+    }
+    
+    t->context.uc_link = &(curr->context);
+    // enqueue the thread that called create
+    // set curr equal to new thread
+    //queue_enqueue((void *) curr, scheduler->s_queue);
+    printf("Pthread create\n");
+    add_job((void *) curr, scheduler->m_queue);
+    
+    scheduler->curr = t;
+    
+    setAlarm();
+    swapcontext(&(curr->context), &(t->context));
+    //pthread_sigmask(SIG_UNBLOCK, &set, NULL);
+	return t->id;
 };
 
 /* give CPU pocession to other user level threads voluntarily */
-int my_pthread_yield() {
-	return 0;
+int my_pthread_yield() { // TODO do some error handling shit with all these methods at some point
+    disableAlarm();
+    puts("YIELD!");
+    tcb *old = scheduler->curr;
+    //scheduler->curr =  ((tcb*) queue_dequeue(scheduler->s_queue));
+    scheduler->curr =  ((tcb*) get_next_job(scheduler->m_queue));
+    if (!scheduler->curr) { // all we got left is main
+        scheduler->curr = old;
+        puts("MAIN IS ONLY THREAD LEFT!");
+    } else {
+        //queue_enqueue((void*) old, scheduler->s_queue);
+        add_job((void*) old, scheduler->m_queue);
+        printf("END SWITCH! - %d\n", timesSwitched++);
+        setAlarm();
+        swapcontext(&old->context, &scheduler->curr->context);
+    }
+
+    return 0;
 };
 
 /* terminate a thread */
 void my_pthread_exit(void *value_ptr) {
+    disableAlarm();
+    puts("hiya from exit!");
+
+    tcb * t = scheduler->curr;
+    t->retval = value_ptr;
+    t->state = Terminated;
+
+    queue_enqueue(t, &(scheduler->terminated));
+    //scheduler->curr = (tcb *) queue_dequeue(scheduler->s_queue);
+    scheduler->curr = (tcb *) get_next_job(scheduler->m_queue);
+    setAlarm();
+    puts("LEAVING EXIT");
+    setcontext(&scheduler->curr->context);
 };
 
 /* wait for thread termination */
@@ -46,4 +234,3 @@ int my_pthread_mutex_unlock(my_pthread_mutex_t *mutex) {
 int my_pthread_mutex_destroy(my_pthread_mutex_t *mutex) {
 	return 0;
 };
-

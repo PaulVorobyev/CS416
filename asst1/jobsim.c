@@ -198,19 +198,92 @@ void runSim(job **jobs, int jobsLen) {
     free(threadArgs);
 }
 
-int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        puts("Usage: ./jobsim <jobs.txt>\n");
-        return EXIT_FAILURE;
+void test_queue() {
+    queue * q = queue_init();
+    int i = 0;
+    for (i = 0; i < 10; i++) {
+        int * j = malloc(sizeof(int));
+        *j = i;
+        queue_enqueue(j, q);
+    }
+    
+    for (i = 0; i < 10; i++) {
+        printf("%d\n", *((int *) queue_dequeue(q)));
+    }
+}
+
+void test_hash() {
+    hash_table * h = hash_init();
+    int i = 0;
+    for (i = 0; i < 10; i++) {
+        int * j = malloc(sizeof(int));
+        *j = i;
+        hash_insert(h, j, *j);
+    }
+    
+    for (i = 0; i < 10; i++) {
+        printf("%d\n", *((int *) hash_find(h, i)));
+    }
+}
+
+void *foo() {
+    int i = 0;
+    for (i = 0; i < 2000; i++) {
+        printf("foo! %d\n", i);
     }
 
-    int jobsLen = 0;
-    job **jobs = NULL;
-    jobsLen = parseJobList(argv[1], &jobs);
+    int * result = (int*) malloc(sizeof(int));
+    *result = 1;
+    return (void*) result;
+}
 
-    runSim(jobs, jobsLen);
-    printBenchmarks(jobs, jobsLen);
-    cleanup(jobs, jobsLen);
+void *bar() {
+    int i = 0;
+    for (i = 0; i < 2000; i++) {
+        printf("bar! %d\n", i);
+    }
 
-    return EXIT_SUCCESS;
+    int * result = (int*) malloc(sizeof(int));
+    *result = 2;
+    return (void*) result;
+}
+
+void test_m_queue(){
+    int i;
+    multi_queue * m_q = m_queue_init(3, 10, 50);
+    for(i = 0; i < 3; i++){
+        int * n = malloc(sizeof(int));
+        *n = i;
+
+        tcb * j = malloc(sizeof(tcb));
+        j->retval = (int *) n;
+        j->p_level = -1;
+        add_job(j, m_q);
+    }
+    
+    for(i = 0; i < 10; i++){
+        printf("apples--------------\n");
+        //print_mq(m_q);
+        tcb * n = (tcb * ) get_next_job(m_q);
+        printf("poop\n");
+        printf("item to dequeue: %d\n", *((int *)(n->retval)));
+        add_job(n, m_q);
+    }
+}
+
+
+int main(int argc, char* argv[]) {
+   printf("START!\n");
+
+   my_pthread_create(&foo, NULL);
+    printf("MAIN RUNNING!\n");
+   
+   my_pthread_create(&bar, NULL);
+    
+   int i;
+   for(i = 0; i < 3000; i++){
+       printf("MAIN RUNNING!\n");
+   }
+
+   puts("broooo");
 }
