@@ -212,6 +212,19 @@ void test_queue() {
     }
 }
 
+void test_hash() {
+    hash_table * h = hash_init();
+    int i = 0;
+    for (i = 0; i < 10; i++) {
+        int * j = malloc(sizeof(int));
+        *j = i;
+        hash_insert(h, j, *j);
+    }
+    
+    for (i = 0; i < 10; i++) {
+        printf("%d\n", *((int *) hash_find(h, i)));
+    }
+}
 
 void *foo() {
     int i = 0;

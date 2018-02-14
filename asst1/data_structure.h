@@ -20,13 +20,13 @@
 
 // Queue
 
-typedef struct queueNode {
+typedef struct linked_node {
     void * data;
-    struct queueNode * next;
-    struct queueNode * prev;
+    struct linked_node * next;
+    struct linked_node * prev;
 } node;
 
-typedef struct queueStructure {
+typedef struct queue_structure {
     node * head;
     node * rear;
     int size;
@@ -39,6 +39,18 @@ typedef struct multiLevelQueue {
     int size;
     int base_time;
 } multi_queue;
+// Hashtable
+
+typedef int (*hash_fn)(int, int); // hashes id
+typedef struct hash_table_entry {
+    void * data;
+    int id;
+} entry;
+typedef struct hash_table_structure {
+    queue ** elements;
+    int size;
+    hash_fn hash;
+} hash_table;
 
 /* Method definitions */
 
@@ -59,5 +71,10 @@ int get_interval_time(int level, multi_queue * m_q);
 void cleanup_m_queue(multi_queue * m_q);
 
 
+// Hashtable
+static int hash_mod(int id, int size);
+hash_table * hash_init();
+void hash_insert(hash_table * h, void * t, int id);
+void * hash_find(hash_table * h, int id);
 
 #endif
