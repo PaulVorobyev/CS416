@@ -248,12 +248,40 @@ void *bar() {
     return (void*) result;
 }
 
+void test_m_queue(){
+    int i;
+    multi_queue * m_q = m_queue_init(3, 10, 50);
+    for(i = 0; i < 3; i++){
+        int * n = malloc(sizeof(int));
+        *n = i;
+
+        tcb * j = malloc(sizeof(tcb));
+        j->retval = (int *) n;
+        j->p_level = -1;
+        add_job(j, m_q);
+    }
+    
+    for(i = 0; i < 10; i++){
+        printf("apples--------------\n");
+        //print_mq(m_q);
+        tcb * n = (tcb * ) get_next_job(m_q);
+        printf("poop\n");
+        printf("item to dequeue: %d\n", *((int *)(n->retval)));
+        add_job(n, m_q);
+    }
+}
+
+
 int main(int argc, char* argv[]) {
    printf("START!\n");
+
    my_pthread_create(&foo, NULL);
+    printf("MAIN RUNNING!\n");
+   
    my_pthread_create(&bar, NULL);
     
-   while(1) {
+   int i;
+   for(i = 0; i < 3000; i++){
        printf("MAIN RUNNING!\n");
    }
 

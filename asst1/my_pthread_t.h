@@ -17,13 +17,14 @@
 #include <sys/syscall.h>
 #include <stdio.h>
 #include <signal.h>
-#include <sys/ucontext.h>
+//#include <sys/ucontext.h>
 #include "data_structure.h"
 
 /* State and TCB */
 
-typedef uint my_pthread_t;
+//typedef uint my_pthread_t;
 
+/*
 typedef enum State {
     Running,
     Ready,
@@ -34,16 +35,18 @@ typedef enum State {
 
 typedef struct threadControlBlock {
     my_pthread_t id;
+    int p_level; //priority level
     ucontext_t context;
     state_t state;
     void * retval; // supplied to pthread_exit
 } tcb;
+*/
 
 /* Scheduler state struct */
 typedef struct scheduler {
     int timerSet; // 0 = false, 1 = true
     int interval; // time in microseconds for alarm to go off
-    queue * s_queue; // scheduling queue
+    multi_queue * m_queue; // scheduling queue
     queue * terminated; // TODO merge with s_queue or make this a different ds
     tcb * curr; // current thread
     int mainThreadCreated; // TODO remove this stupid flag

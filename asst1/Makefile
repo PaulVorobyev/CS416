@@ -19,5 +19,8 @@ data_structure.o: data_structure.h
 sim: jobsim.c data_structure.o my_pthread.o
 	$(CC) -pthread -g -o jobsim data_structure.o my_pthread.o jobsim.c
 
+queue: jobsim.c data_structure.o
+	$(CC) -pthread -g -o queue_test data_structure.o queue_test.c
+
 clean:
-	rm -rf testfile *.o *.a jobsim jobsim.dSYM
+	rm -rf testfile *.o *.a jobsim jobsim.dSYM queue_test
