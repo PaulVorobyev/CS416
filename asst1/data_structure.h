@@ -38,6 +38,21 @@ typedef struct hash_table_structure {
     hash_fn hash;
 } hash_table;
 
+// Max Heap
+
+typedef int (*cmp_fn)( void *, void * );
+
+typedef struct heap_node {
+    void *data;
+} h_node;
+
+typedef struct max_heap_structure {
+    cmp_fn cmp;
+    h_node *arr;
+    int size;
+    int capacity;
+} m_heap;
+
 /* Method definitions */
 
 // Queue
@@ -53,5 +68,12 @@ int isEmpty(queue * q);
 hash_table * hash_init();
 void hash_insert(hash_table * h, void * t, int id);
 void * hash_find(hash_table * h, int id);
+
+// Heap
+
+m_heap *m_heap_init(cmp_fn cmp);
+int m_heap_is_empty(m_heap *h);
+void m_heap_insert(m_heap *h, void *data);
+void *m_heap_delete(m_heap *h);
 
 #endif

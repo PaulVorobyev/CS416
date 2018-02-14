@@ -220,7 +220,7 @@ void *bar() {
 }
 
 void test_queue() {
-    puts("START TEST QUEUE");
+    puts("\nSTART TEST QUEUE");
 
     queue * q = queue_init();
     int i = 0;
@@ -231,14 +231,15 @@ void test_queue() {
     }
     
     for (i = 0; i < 10; i++) {
-        printf("%d\n", *((int *) queue_dequeue(q)));
+        printf("%d ", *((int *) queue_dequeue(q)));
     }
+    puts("");
 
     puts("END TEST QUEUE");
 }
 
 void test_hash() {
-    puts("START TEST HASH");
+    puts("\nSTART TEST HASH");
 
     hash_table * h = hash_init();
     int i = 0;
@@ -249,14 +250,15 @@ void test_hash() {
     }
     
     for (i = 0; i < 10; i++) {
-        printf("%d\n", *((int *) hash_find(h, i)));
+        printf("%d ", *((int *) hash_find(h, i)));
     }
+    puts("");
 
     puts("END TEST HASH");
 }
 
 void test_m_queue(){
-    puts("START TEST M_QUEUE");
+    puts("\nSTART TEST M_QUEUE");
 
     puts("SPAWN TWO THREADS");
     my_pthread_create(&foo, NULL);
@@ -270,8 +272,34 @@ void test_m_queue(){
     puts("END TEST M_QUEUE");
 }
 
+int int_cmp(void *a, void *b) {
+    return *((int*)a) - *((int*)b);
+}
+
+void test_m_heap(){
+    puts("\nSTART TEST M_HEAP");
+
+    m_heap *h = m_heap_init(int_cmp);
+    
+    int i = 0;
+    for (; i < 20; i++) {
+        int *j = (int*) malloc(sizeof(int));
+        *j = i;
+        m_heap_insert(h, (void*)j);
+    }
+
+    i = 0;
+    for (; i < 20; i++) {
+        printf("%d ", *((int*)m_heap_delete(h)));
+    }
+    puts("");
+
+    puts("END TEST M_HEAP");
+}
+
 int main(int argc, char* argv[]) {
     test_m_queue();
     test_hash();
     test_queue();
+    test_m_heap();
 }
