@@ -42,22 +42,10 @@ typedef struct threadControlBlock {
 } tcb;
 */
 
-/* Scheduler state struct */
-typedef struct scheduler {
-    multi_queue * m_queue; // scheduling queue
-    queue * terminated; // TODO merge with s_queue or make this a different ds
-    tcb * curr; // current thread
-} sched;
-
 /* mutex struct definition */
 typedef struct my_pthread_mutex_t {
 	/* add something here */
 } my_pthread_mutex_t;
-
-
-
-
-/* Scheduling functions */
 
 /* create a new thread */
 int my_pthread_create(void *(*function)(void*), void * arg);

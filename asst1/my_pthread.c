@@ -17,10 +17,37 @@
 // alarm time for highest priority
 #define ALARM_BASE_TIME 200
 
+/* Structs */
+
+typedef struct multiLevelQueue {
+    queue ** q_arr;
+    int num_levels;
+    int interval_time_delta;
+    int size;
+    int base_time;
+} multi_queue;
+
+typedef struct scheduler {
+    multi_queue * m_queue; // scheduling queue
+    queue * terminated; // TODO merge with s_queue or make this a different ds
+    tcb * curr; // current thread
+} sched;
+
+/* Forward Declarations */
+
+multi_queue * m_queue_init(int num_levels, int time_delta, int base_time);
+void init_job(void * element, multi_queue * m_q);
+void * get_next_job(multi_queue * m_q);
+int is_empty_m_queue(multi_queue * m_q);
+int get_interval_time(int level, multi_queue * m_q);
+void cleanup_m_queue(multi_queue * m_q);
+void add_job(void * element, multi_queue * m_q);
+
 /* Globals */
 
 static sched * scheduler = NULL;
 int timesSwitched = 0; // TODO: debug
+int nextThreadNumber = 0;
 
 /* Alarm-related functions */
 
@@ -61,11 +88,98 @@ void alrm_handler(int signo) {
     swapcontext(&old->context, &scheduler->curr->context);
 }
 
+/* m_queue */
+
+multi_queue * m_queue_init(int num_levels, int time_delta, int base_time){
+    // Create queue array
+    int i;
+    queue ** s_q = (queue **) malloc(num_levels * sizeof(queue*));
+    for(i = 0; i < num_levels; i++){
+        s_q[i] = queue_init();
+    }
+    
+    // Create multi level q
+    multi_queue * q = (multi_queue *) malloc(sizeof(multi_queue));
+    q->q_arr = s_q;
+    q->num_levels = num_levels;
+    q->interval_time_delta = time_delta;
+    q->size = 0;
+    q->base_time = base_time;
+
+    return q;
+}
+
+// Assume element is always TCB
+void add_job(void * element, multi_queue * m_q){
+    int curr_level = ((tcb *)element)->p_level;
+
+    printf ("ADD: curr_level: %d\n", curr_level);
+
+    // if on last level, then put on same level
+    if(curr_level == m_q->num_levels-1){
+        printf("Add same level\n");
+        queue_enqueue(element, m_q->q_arr[curr_level]);
+    }else if (curr_level < m_q->num_levels-1){
+        // add job to next level down
+        ((tcb *)element)->p_level += 1;
+        printf("New level: %d\n", ((tcb *)element)->p_level);
+        queue_enqueue(element, m_q->q_arr[curr_level+1]);
+    }else{
+        printf("ERROR! You're an idiot\n");
+    }
+
+    m_q->size += 1;
+}
+
+void * get_next_job(multi_queue * m_q){
+    if(is_empty_m_queue(m_q)){
+        return 0;
+    }
+
+    int i;
+    queue * q;
+    void * data;
+    for(i = 0; i < m_q->num_levels; i++){
+        q = m_q->q_arr[i];
+        if(!isEmpty(q)){
+            printf("Grab from queue at level %d\n", i);
+            data = queue_dequeue(q);
+            m_q->size -= 1;
+            break;
+        }
+    }
+    return data;
+}
+
+int is_empty_m_queue(multi_queue * m_q){ 
+    return m_q->size == 0;
+}
+
+int get_interval_time(int level, multi_queue * m_q){
+    if(level < 0){
+        return m_q->base_time;
+    }
+    return m_q->base_time + (m_q->interval_time_delta * level);
+}
+
+void cleanup_m_queue(multi_queue * m_q){
+    int i;
+    for(i = 0; i < m_q->num_levels; i++){
+        free(m_q->q_arr[i]);
+    }
+
+    free(m_q->q_arr);
+    free(m_q);
+}
+
+/* Scheduler */
+
+
 /* initialize a tcb */
 tcb * tcb_init() {
     tcb * t = (tcb * ) malloc(sizeof(tcb));
     getcontext(&(t->context));
-    t->id = (int) t; // TODO: set id = to address for utility
+    t->id = nextThreadNumber++; // TODO: set id = to address for utility
     t->p_level = -1;
     t->state = 0;
 
@@ -86,7 +200,7 @@ void sched_init() {
     return;
 }
 
-/* m_queue */
+/* Threads */
 
 /* runs a thread function then calls pthread_exit with its ret_val */
 void thread_runner(void *(*function)(void*), void *arg) {
@@ -166,7 +280,7 @@ void my_pthread_exit(void *value_ptr) {
     tcb *old = scheduler->curr;
     old->retval = value_ptr;
     old->state = Terminated;
-    queue_enqueue(old, &(scheduler->terminated));
+    queue_enqueue(old, scheduler->terminated);
 
     puts("LEAVING EXIT!"); //TODO: debug
 

@@ -248,7 +248,7 @@ void *bar() {
     return (void*) result;
 }
 
-void test_m_queue(){
+/*void test_m_queue(){
     int i;
     multi_queue * m_q = m_queue_init(3, 10, 50);
     for(i = 0; i < 3; i++){
@@ -269,7 +269,7 @@ void test_m_queue(){
         printf("item to dequeue: %d\n", *((int *)(n->retval)));
         add_job(n, m_q);
     }
-}
+}*/
 
 
 int main(int argc, char* argv[]) {
