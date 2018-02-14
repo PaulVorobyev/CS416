@@ -12,10 +12,6 @@
 
 #define _GNU_SOURCE
 
-#include <stdlib.h>
-#include <sys/types.h>
-#include "general.h"
-
 /* Struct definitions */
 
 // Queue
@@ -35,10 +31,7 @@ typedef struct queue_structure {
 // Hashtable
 
 typedef int (*hash_fn)(int, int); // hashes id
-typedef struct hash_table_entry {
-    void * data;
-    int id;
-} entry;
+
 typedef struct hash_table_structure {
     queue ** elements;
     int size;
@@ -48,15 +41,15 @@ typedef struct hash_table_structure {
 /* Method definitions */
 
 // Queue
+
 queue * queue_init();
 void queue_enqueue(void * element, queue * q);
 void * queue_dequeue(queue * q);
 void * peek(queue * q);
-void cycle_next_ele(queue * q);
 int isEmpty(queue * q);
 
 // Hashtable
-static int hash_mod(int id, int size);
+
 hash_table * hash_init();
 void hash_insert(hash_table * h, void * t, int id);
 void * hash_find(hash_table * h, int id);

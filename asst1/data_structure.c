@@ -1,6 +1,8 @@
 #include "data_structure.h"
+#include <stdlib.h>
+#include <stdio.h>
 
-/* Single Queue Functions */
+/* Queue Implementation */
 
 queue * queue_init() {
     queue * q = (queue *) malloc(sizeof(queue));
@@ -66,6 +68,15 @@ int isEmpty(queue * q) {
 
 /* Hashtable method implementations */
 
+typedef struct hash_table_entry {
+    void * data;
+    int id;
+} entry;
+
+static int hash_mod(int id, int size) {
+    return id % size;
+}
+
 hash_table * hash_init() {
     hash_table * h = (hash_table *) malloc(sizeof(hash_table));
     h->size = 100;
@@ -79,10 +90,6 @@ hash_table * hash_init() {
         i++;
     }
     return h;
-}
-
-static int hash_mod(int id, int size) {
-    return id % size;
 }
 
 void hash_insert(hash_table * h, void * t, int id) {

@@ -7,40 +7,13 @@
 // iLab Server: 
 #ifndef MY_PTHREAD_T_H
 #define MY_PTHREAD_T_H
-
 #define _GNU_SOURCE
 
-#define MEM 64000
-
 /* include lib header files that you need here: */
-#include <unistd.h>
-#include <sys/syscall.h>
-#include <stdio.h>
-#include <signal.h>
-//#include <sys/ucontext.h>
-#include "data_structure.h"
+#include <sys/types.h>
 
-/* State and TCB */
-
-//typedef uint my_pthread_t;
-
-/*
-typedef enum State {
-    Running,
-    Ready,
-    Terminated,
-    Waiting,
-    Locking
-} state_t;
-
-typedef struct threadControlBlock {
-    my_pthread_t id;
-    int p_level; //priority level
-    ucontext_t context;
-    state_t state;
-    void * retval; // supplied to pthread_exit
-} tcb;
-*/
+/* my_pthread_t type definition */
+typedef int my_pthread_t;
 
 /* mutex struct definition */
 typedef struct my_pthread_mutex_t {
