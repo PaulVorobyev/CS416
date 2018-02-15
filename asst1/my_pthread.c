@@ -14,7 +14,7 @@
 #include <sys/ucontext.h>
 #include <stdlib.h>
 #include "data_structure.h"
-#include "m_queue.h"
+#include "scheduler.h"
 
 /* Constants */
 
@@ -27,21 +27,13 @@
 // bytes to allocate for thread stack
 #define MEM 64000
 
-/* Structs */
-
-typedef struct scheduler {
-    multi_queue * m_queue; // scheduling queue
-    queue * terminated; // TODO: merge with s_queue or make this a different ds
-    tcb * curr; // current thread
-} sched;
-
 /* Forward Declarations */
+
 // alarm
 static void setAlarm();
 static void disableAlarm();
 void alrm_handler(int signo);
 // scheduler
-void sched_init();
 void thread_runner(void *(*function)(void*), void *arg);
 
 /* Globals */
@@ -83,25 +75,10 @@ void alrm_handler(int signo) {
     // enqueue old job
     add_job((void*) old, scheduler->m_queue);
 
+    puts("END SWITCH"); // TODO: debug
     // start next job
     setAlarm();
     swapcontext(&old->context, &scheduler->curr->context);
-}
-
-/* Scheduler */
-
-/* initializes global scheduler variable */
-void sched_init() {
-    if (scheduler != NULL) {
-        printf("Error: scheduler already created!");
-        exit(1);
-    }
-
-    scheduler = (sched *) malloc(sizeof(sched));
-    scheduler->m_queue = m_queue_init(NUM_QUEUE_LEVELS, ALARM_TIME_DELTA, ALARM_BASE_TIME);
-    scheduler->terminated = queue_init();
-    
-    return;
 }
 
 /* Threads */
@@ -123,7 +100,8 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
     tcb * old;
     if (scheduler == NULL) { // should only be executed on first thread create
         old = tcb_init();
-        sched_init();
+        scheduler = sched_init(NUM_QUEUE_LEVELS, ALARM_TIME_DELTA,
+            ALARM_BASE_TIME);
         signal(SIGALRM, alrm_handler);
     } else {
         old = scheduler->curr;
@@ -184,18 +162,57 @@ void my_pthread_exit(void *value_ptr) {
     tcb *old = scheduler->curr;
     old->retval = value_ptr;
     old->state = Terminated;
-    queue_enqueue(old, scheduler->terminated);
+    hash_insert(scheduler->terminated, (void*)old, old->id);
 
     puts("LEAVING EXIT!"); //TODO: debug
 
-    // start next job
-    scheduler->curr = (tcb *) get_next_job(scheduler->m_queue);
+    // if there is a job joined on this thread, load that
+    // otherwise just load the next one in m_queue
+    m_heap *joinedJob = (m_heap*) hash_find(scheduler->joinJobs, old->id);
+    if (joinedJob) {
+        scheduler->curr = (tcb*) m_heap_delete(joinedJob);
+    } else {
+        scheduler->curr = (tcb *) get_next_job(scheduler->m_queue);
+    }
+
     setAlarm();
     setcontext(&scheduler->curr->context);
 };
 
 /* wait for thread termination */
 int my_pthread_join(my_pthread_t thread, void **value_ptr) {
+    tcb *targetThread = (tcb*) hash_find(scheduler->terminated, thread);
+    if (targetThread) { // already finished
+        *value_ptr = targetThread->retval;
+        return 0;
+    }
+
+    tcb *old = scheduler->curr;
+    old->state = Waiting;
+
+    add_waiting_job(scheduler, old, scheduler->joinJobs,
+        (int)thread);
+
+    scheduler->curr = (tcb*) get_next_job(scheduler->m_queue);
+
+    if (!scheduler->curr) {
+        puts("Error: joining when you are only thread left");
+        exit(1);
+    }
+    
+    swapcontext(&old->context, &scheduler->curr->context);
+
+    old->state = Running;
+
+    targetThread = (tcb*) hash_find(scheduler->terminated, thread);
+
+    if (!targetThread) {
+        printf("Error: could not find terminated thread: %d", thread);
+        exit(1);
+    }
+
+    *value_ptr = targetThread->retval;
+
 	return 0;
 };
 
