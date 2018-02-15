@@ -297,9 +297,31 @@ void test_m_heap(){
     puts("END TEST M_HEAP");
 }
 
+void test_join(){
+    puts("\nSTART TEST JOIN");
+
+    puts("SPAWN TWO THREADS");
+    my_pthread_t f = my_pthread_create(&foo, NULL);
+    my_pthread_t b = my_pthread_create(&bar, NULL);
+    my_pthread_t b2 = my_pthread_create(&bar, NULL);
+
+    void *f_ret = NULL;
+    void *b_ret = NULL;
+    void *b2_ret = NULL;
+    my_pthread_join(f, &f_ret);
+    my_pthread_join(b, &b_ret);
+    my_pthread_join(b2, &b2_ret);
+
+    printf("Threads returned: %d, %d, %d\n", (*(int*)f_ret),
+        (*(int*)b_ret), (*(int*)b2_ret));
+
+    puts("END TEST JOIN");
+}
+
 int main(int argc, char* argv[]) {
     test_m_queue();
     test_hash();
     test_queue();
     test_m_heap();
+    test_join();
 }

@@ -105,9 +105,9 @@ void hash_insert(hash_table * h, void * t, int id) {
 void * hash_find(hash_table *h, int id) {
     int idx = h->hash(id, h->size);
     node * n  = h->elements[idx]->head;
-    entry * e = (entry *) n->data;
     void * t = NULL;
     while (n != NULL) {
+        entry * e = (entry *) n->data;
         if (e->id == id) {
             t = e->data;
             break;

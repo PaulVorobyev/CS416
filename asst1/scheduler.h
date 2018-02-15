@@ -1,6 +1,9 @@
 #include "data_structure.h"
 #include <sys/ucontext.h>
 
+// State
+
+// TODO: do we actually use this?
 typedef enum State {
     Running,
     Ready,
@@ -8,6 +11,8 @@ typedef enum State {
     Waiting,
     Locking
 } state_t;
+
+// Thread Control Block
 
 typedef struct threadControlBlock {
     int id;
@@ -17,7 +22,9 @@ typedef struct threadControlBlock {
     void * retval; // supplied to pthread_exit
 } tcb;
 
-tcb * tcb_init();
+tcb *tcb_init();
+
+// Multi Level Queue
 
 typedef struct multiLevelQueue {
     queue ** q_arr;
@@ -34,3 +41,23 @@ int is_empty_m_queue(multi_queue * m_q);
 int get_interval_time(int level, multi_queue * m_q);
 void cleanup_m_queue(multi_queue * m_q);
 void add_job(void * element, multi_queue * m_q);
+
+// Scheduler
+
+typedef struct scheduler {
+    tcb * curr; // current thread
+    multi_queue * m_queue; // scheduling queue
+    hash_table *terminated;
+    hash_table *unlockJobs;
+
+    // TODO: we currently store the joined job in a max heap inside this
+    // hash table. this is because I thought there could be multiple jobs
+    // ,but in actuality, only one job should ever join on a particular thread.
+    // TL;DR we should insert a tcb instead of max heap
+    hash_table *joinJobs;
+} sched;
+
+sched *sched_init(int num_queue_levels, int alarm_time_delta,
+    int alarm_base_time);
+void add_waiting_job(sched* s, tcb *t, hash_table *jobs, int id);
+
