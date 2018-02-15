@@ -181,6 +181,12 @@ void my_pthread_exit(void *value_ptr) {
 
 /* wait for thread termination */
 int my_pthread_join(my_pthread_t thread, void **value_ptr) {
+    tcb *targetThread = (tcb*) hash_find(scheduler->terminated, thread);
+    if (targetThread) { // already finished
+        *value_ptr = targetThread->retval;
+        return 0;
+    }
+
     tcb *old = scheduler->curr;
     old->state = Waiting;
 
@@ -198,7 +204,7 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
 
     old->state = Running;
 
-    tcb *targetThread = (tcb*) hash_find(scheduler->terminated, thread);
+    targetThread = (tcb*) hash_find(scheduler->terminated, thread);
 
     if (!targetThread) {
         printf("Error: could not find terminated thread: %d", thread);
