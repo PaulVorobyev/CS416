@@ -7,11 +7,11 @@
  * col1: number of seconds after the sim starts that the 
  * the thread should be created
  *
- * col2: how many seconds the job should run for
+ * col2: how many seconds it should run
  *
  * col3: number of times thread should yield control
  * (yields will be evenly distributed throughout duration
- * of the job)
+ * of the job) // TODO: actually use this or remove
  *
  * results are printed to stdout
  */
@@ -21,17 +21,22 @@
 #include <sys/time.h>
 #include "my_pthread_t.h"
 #include "data_structure.h"
+#include <math.h>
+
+// number to be assigned to the next job to finish
+int place = 0; // TODO: not used
 
 typedef struct job {
-    int startAfter;
-    int duration;
-    int numIOs;
-    int totalRuntime;
+    int startAfter; // at what time t the job started
+    int duration; // how long the thread should run
+    int numIOs; // TODO: not used
+    int totalRuntime; // at what time t the job ended
+    int place; // TODO: not used
 } job;
 
 typedef struct jobArgs {
   int duration;
-  int numIOs;
+  int numIOs; // TODO: not used
 } jobArgs;
 
 int jobCmp(const void *a, const void *b) {
@@ -66,6 +71,7 @@ int parseJobList(const char *filename, job ***jobsPtr) {
         j->duration = duration;
         j->numIOs = numIOs;
         j->totalRuntime = 10;
+        j->place = -1;
         jobs[jobsLen] = j;
         jobsLen++;
 
@@ -80,46 +86,51 @@ int parseJobList(const char *filename, job ***jobsPtr) {
 
 void printBenchmarks(job **jobs, int jobsLen) {
     int i = 0;
+    const char *border = "##################################";
+    
+    puts("");
+    puts(border);
 
-    printf("%s\t%s\t%s\t%s\t%s\n", "no.", "startAfter",
-        "dur", "numIOs", "runtime");
+    printf("%s\t%s\t%s\t%s\n", "start",
+        "dur", "numIOs", "end");
 
     for (; i < jobsLen; i++) {
         job *j = jobs[i];
-        printf("%d.\t%d\t\t%d\t%d\t\t%d\n", i, j->startAfter,
+        printf("%d\t%d\t%d\t%d\n", j->startAfter,
             j->duration, j->numIOs, j->totalRuntime);
     }
+
+    puts(border);
 }
 
 /*
  * simulation of a job.
  *
  * duration - how many seconds it should run for
- * numIOs - number of times it should yield
+ * numIOs - number of times it should yield // TODO: not used
  */
-void *runJob(int duration, int numIOs) {
+void *runJob(void *args) {
+    jobArgs *a = (jobArgs*) args;
+    int duration = a->duration;
+    //int numIOs = a->numIOs;
+
     struct timeval startTime;
     struct timeval endTime;
     struct timeval curTime;
     gettimeofday(&startTime, NULL);
-    double ioInterval = (double) duration / (double) numIOs;
+    //double ioInterval = (double) duration / (double) numIOs;
 
     while (1) {
         gettimeofday(&curTime, NULL);
         int curDuration = curTime.tv_sec - startTime.tv_sec;
         if (curDuration > duration) {
             break;
-        } else if (curDuration > ioInterval) {
-          //my_pthread_yield();
-          ioInterval += ioInterval;
         }
-
-        sleep(1);
     }
 
     gettimeofday(&endTime, NULL);
-    long int *runtime = malloc(sizeof(long int));
-    *runtime = startTime.tv_sec - endTime.tv_sec;
+    int *runtime = malloc(sizeof(int));
+    *runtime = endTime.tv_sec - startTime.tv_sec;
 
     return (void*) runtime;
 }
@@ -159,13 +170,13 @@ void runSim(job **jobs, int jobsLen) {
         int passedTimeToLaunch = (simCurTime.tv_sec - simStartTime.tv_sec) >= jobs[i]->startAfter;
         if (passedTimeToLaunch) {
             my_pthread_t thread;
-            pthread_attr_t *attr = NULL;
+            //pthread_attr_t *attr = NULL;
 
             jobArgs *args = (jobArgs*) malloc(sizeof(jobArgs));
             args->duration = jobs[i]->duration;
             args->numIOs = jobs[i]->numIOs;
 
-            //my_pthread_create(&thread, attr, runJob, (void*) args);
+            thread = my_pthread_create(&runJob, (void*) args);
 
             threads[i] = thread;
             threadArgs[i] = args;
@@ -179,13 +190,12 @@ void runSim(job **jobs, int jobsLen) {
     // join on threads
     i = 0;
     while (i < jobsLen) {
-        long int *ret_val;
+        int *ret_val;
 
-        //my_pthread_join(threads[i], (void**) &ret_val);
-        //jobs[i]->totalRuntime = *ret_val;
+        my_pthread_join(threads[i], (void**) &ret_val);
+        jobs[i]->totalRuntime = *ret_val + jobs[i]->startAfter;
         free(ret_val);
         
-
         i++;
     }
 
@@ -198,4 +208,18 @@ void runSim(job **jobs, int jobsLen) {
 }
 
 int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        puts("Usage: ./jobsim <jobs.txt>\n");
+        return EXIT_FAILURE;
+    }
+
+    int jobsLen = 0;
+    job **jobs = NULL;
+    jobsLen = parseJobList(argv[1], &jobs);
+
+    runSim(jobs, jobsLen);
+    printBenchmarks(jobs, jobsLen);
+    cleanup(jobs, jobsLen);
+
+    return EXIT_SUCCESS;
 }

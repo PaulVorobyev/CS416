@@ -22,7 +22,7 @@ test: test.c data_structure.o my_pthread.o scheduler.o
 	$(CC) -pthread -g -o test data_structure.o my_pthread.o scheduler.o test.c
 
 benchmark: benchmark.c data_structure.o my_pthread.o scheduler.o
-	$(CC) -pthread -g -o benchmark data_structure.o my_pthread.o scheduler.o benchmark.c
+	$(CC) -pthread -g -o benchmark data_structure.o my_pthread.o scheduler.o benchmark.c -lm
 
 clean:
 	rm -rf *.o *.a test benchmark

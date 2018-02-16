@@ -123,7 +123,7 @@ void thread_runner(void *(*function)(void*), void *arg) {
     void *ret_val = function(arg);
     my_pthread_exit(ret_val);
 
-    printf("END THREAD RUNNER: %d", *((int*)ret_val)); // TODO: debug
+    //printf("END THREAD RUNNER: %d", *((int*)ret_val)); // TODO: debug
 }
 
 /* create a new thread */
