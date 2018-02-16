@@ -27,20 +27,50 @@
 // bytes to allocate for thread stack
 #define MEM 64000
 
-/* Forward Declarations */
-
-// alarm
-static void setAlarm();
-static void disableAlarm();
-void alrm_handler(int signo);
-// scheduler
-void thread_runner(void *(*function)(void*), void *arg);
-
 /* Globals */
 
 static sched * scheduler = NULL;
-int timesSwitched = 0; // TODO: debug
 int nextMutexId = 0; // id of next mutex to be created
+int timesSwitched = 0; // TODO: debug
+
+/* Macros */
+
+// start alarm and swap next thread
+#define SWAP_NEXT_THREAD(old, next) {\
+    scheduler->curr = next;\
+    setAlarm();\
+    swapcontext(&old->context, &next->context);}\
+
+// start alarm and set next thread
+#define SET_NEXT_THREAD(next) {\
+    scheduler->curr = next;\
+    setAlarm();\
+    setcontext(&next->context);}\
+
+// set alarm and continue running current thread
+#define CONTINUE_CURRENT_THREAD setAlarm()
+
+/* Priority Inversion Check */
+
+void priority_inversion_check() {
+    // handle priority inversion using Original Ceiling Priority Protocol
+    // see: https://en.wikipedia.org/wiki/Priority_ceiling_protocol
+    my_pthread_mutex_t *mutex =
+        (my_pthread_mutex_t*) hash_find(scheduler->lockOwners,
+        scheduler->curr->id);
+    if (mutex) {
+        m_heap *waiting_jobs = (m_heap*) hash_find(scheduler->unlockJobs,
+            mutex->id);
+        if (waiting_jobs) {
+            puts("PI!");
+            int highest_p_level = ((tcb*)waiting_jobs->arr[0].data)
+                ->p_level;
+            // subtract 1 since the add_job() will add 1
+            scheduler->curr->p_level = (highest_p_level > -1 )
+                ? highest_p_level - 1 : -1;
+        }
+    }
+}
 
 /* Alarm-related functions */
 
@@ -50,7 +80,8 @@ static void setAlarm() {
         exit(1);
     }
 
-    int interval = get_interval_time(scheduler->curr->p_level, scheduler->m_queue);
+    int interval = get_interval_time(scheduler->curr->p_level,
+        scheduler->m_queue);
 
     ualarm(interval, interval);
 }
@@ -64,22 +95,20 @@ void alrm_handler(int signo) {
 
     printf("SWITCH! - %d\n", timesSwitched++); // TODO: debug
 
-    tcb *old = scheduler->curr;
-    scheduler->curr =  ((tcb*) get_next_job(scheduler->m_queue));
-
-    // all we got left is main so it should continue running
-    if (!scheduler->curr) { 
-        scheduler->curr = old;
+    // this is only ready thread, let it keep running
+    if (is_empty_m_queue(scheduler->m_queue)) {
+        CONTINUE_CURRENT_THREAD;
         return;
     }
 
-    // enqueue old job
+    priority_inversion_check();
+
+    tcb *old = scheduler->curr;
+    tcb *next = (tcb*) get_next_job(scheduler->m_queue);
+
     add_job((void*) old, scheduler->m_queue);
 
-    puts("END SWITCH"); // TODO: debug
-    // start next job
-    setAlarm();
-    swapcontext(&old->context, &scheduler->curr->context);
+    SWAP_NEXT_THREAD(old, next);
 }
 
 /* Threads */
@@ -114,16 +143,12 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
     // create new thread
     tcb * t = tcb_init();
     getcontext(&(t->context));
-    t->context.uc_stack.ss_sp = malloc(MEM);
-    t->context.uc_stack.ss_size = MEM;
-    t->context.uc_stack.ss_flags = 0;
     t->context.uc_link = &(old->context);
+    t->context.uc_stack = (stack_t) {.ss_sp = malloc(MEM), .ss_size = MEM,
+        .ss_flags = 0};
     makecontext(&(t->context), thread_runner, 2, function, arg);
 
-    // start new thread
-    scheduler->curr = t;
-    setAlarm();
-    swapcontext(&(old->context), &(t->context));
+    SWAP_NEXT_THREAD(old, t);
 
 	return t->id;
 };
@@ -134,21 +159,20 @@ int my_pthread_yield() {
 
     puts("YIELD!"); //TODO: debug
 
-    tcb *old = scheduler->curr;
-    scheduler->curr = ((tcb*) get_next_job(scheduler->m_queue));
-
-    if (!scheduler->curr) { // all we got left is main
-        puts("MAIN IS ONLY THREAD LEFT!"); //TODO: debug
-
-        scheduler->curr = old;
-    } else {
-        printf("END SWITCH! - %d\n", timesSwitched++); //TODO: debug
-
-        add_job((void*) old, scheduler->m_queue);
-
-        setAlarm();
-        swapcontext(&old->context, &scheduler->curr->context);
+    // this is only thread ready, let it keep running
+    if (is_empty_m_queue(scheduler->m_queue)) {
+        CONTINUE_CURRENT_THREAD;
+        return 0;
     }
+
+    priority_inversion_check();
+
+    tcb *old = scheduler->curr;
+    tcb *next = ((tcb*) get_next_job(scheduler->m_queue));
+
+    add_job((void*) old, scheduler->m_queue);
+
+    SWAP_NEXT_THREAD(old, next);
 
     return 0;
 };
@@ -165,55 +189,73 @@ void my_pthread_exit(void *value_ptr) {
     old->state = Terminated;
     hash_insert(scheduler->terminated, (void*)old, old->id);
 
-    puts("LEAVING EXIT!"); //TODO: debug
+    m_heap *joinedJob = (m_heap*) hash_find(scheduler->joinJobs, old->id);
+    hash_delete(scheduler->joinJobs, old->id);
+
+    // if there are no ready threads and noone is joined on this,
+    // then exit the process
+    if (is_empty_m_queue(scheduler->m_queue) && m_heap_is_empty(joinedJob)) {
+        exit(0);
+    }
 
     // if there is a job joined on this thread, load that
     // otherwise just load the next one in m_queue
-    m_heap *joinedJob = (m_heap*) hash_find(scheduler->joinJobs, old->id);
-    if (joinedJob) {
-        scheduler->curr = (tcb*) m_heap_delete(joinedJob);
-    } else {
-        scheduler->curr = (tcb *) get_next_job(scheduler->m_queue);
-    }
+    tcb* next = (joinedJob) ? (tcb*) m_heap_delete(joinedJob)
+        : (tcb *) get_next_job(scheduler->m_queue);
 
-    setAlarm();
-    setcontext(&scheduler->curr->context);
+    SET_NEXT_THREAD(next);
 };
 
 /* wait for thread termination */
 int my_pthread_join(my_pthread_t thread, void **value_ptr) {
+    disableAlarm();
+
     tcb *targetThread = (tcb*) hash_find(scheduler->terminated, thread);
+    hash_delete(scheduler->terminated, thread);
     if (targetThread) { // already finished
-        *value_ptr = targetThread->retval;
+        if (value_ptr) {
+            *value_ptr = targetThread->retval;
+        }
+
+        CONTINUE_CURRENT_THREAD;
         return 0;
     }
 
     tcb *old = scheduler->curr;
-    old->state = Waiting;
+    tcb *next = (tcb*) get_next_job(scheduler->m_queue);
 
     add_waiting_job(scheduler, old, scheduler->joinJobs,
         (int)thread);
 
-    scheduler->curr = (tcb*) get_next_job(scheduler->m_queue);
+    if (!next) {
+        puts("Error: joining when you are only thread left"); // TODO: debug
 
-    if (!scheduler->curr) {
-        puts("Error: joining when you are only thread left");
-        exit(1);
+        // just loop infinitely so the user can realize something is wrong
+        // and kill the process
+        while(1) {};
     }
-    
-    swapcontext(&old->context, &scheduler->curr->context);
 
-    old->state = Running;
+    SWAP_NEXT_THREAD(old, next);
+
+    // we have been swapped in again because the thread we are joining
+    // on is finished
+    
+    disableAlarm();
 
     targetThread = (tcb*) hash_find(scheduler->terminated, thread);
+    hash_delete(scheduler->terminated, thread);
 
+    // we messed up. the target thread should be done now
     if (!targetThread) {
         printf("Error: could not find terminated thread: %d", thread);
         exit(1);
     }
 
-    *value_ptr = targetThread->retval;
+    if (value_ptr) {
+        *value_ptr = targetThread->retval;
+    }
 
+    CONTINUE_CURRENT_THREAD;
 	return 0;
 };
 
@@ -228,32 +270,37 @@ int my_pthread_mutex_init(my_pthread_mutex_t *mutex, const pthread_mutexattr_t *
 int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
     disableAlarm();
 
-    tcb *old = (tcb*) scheduler->curr;
-
     if (!mutex->locked) {
         mutex->locked = 1;
+        hash_insert(scheduler->lockOwners, (void*) mutex, scheduler->curr->id);
+
+        CONTINUE_CURRENT_THREAD;
         return 0;
     }
 
-    // add to heap of jobs waiting on this mutex
+    tcb *old = (tcb*) scheduler->curr;
+    tcb *next = (tcb*) get_next_job(scheduler->m_queue);
+
     add_waiting_job(scheduler, old, scheduler->unlockJobs, mutex->id);
 
-    tcb *next_job = (tcb*) get_next_job(scheduler->m_queue);
+    if (!next) {
+        puts("Error: waiting on lock, when you are only thread left"); // TODO: debug
 
-    if (!next_job) {
-        puts("Error: waiting on lock, when you are only thread left");
-        exit(1);
+        // just loop infinitely so the user can realize something is wrong
+        // and kill the process
+        while(1) {};
     }
 
-    // start next job
-    scheduler->curr = next_job;
-    setAlarm();
-    swapcontext(&old->context, &scheduler->curr->context);
-
-    // if we are here it's because we've been swapped in since the mutex
-    // is unlocked, so we take it
+    SWAP_NEXT_THREAD(old, next);
+    
+    // we have been swapped in again because the mutex is now unlocked
+    
+    disableAlarm();
+    
     mutex->locked = 1;
+    hash_insert(scheduler->lockOwners, (void*) mutex, scheduler->curr->id);
 
+    CONTINUE_CURRENT_THREAD;
 	return 0;
 };
 
@@ -261,28 +308,38 @@ int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
 int my_pthread_mutex_unlock(my_pthread_mutex_t *mutex) {
     disableAlarm();
 
-    printf("MUTEX%d UNLOCKED!", mutex->id + 1);
+    printf("MUTEX%d UNLOCKED!\n", mutex->id + 1);
+
+    mutex->locked = 0;
+    hash_delete(scheduler->lockOwners, scheduler->curr->id);
+
+    m_heap *waiting_jobs = hash_find(scheduler->unlockJobs, mutex->id);
+    
+    // noone is waiting on this lock so continue running
+    if (!waiting_jobs) {
+        CONTINUE_CURRENT_THREAD;
+        return 0;
+    }
 
     tcb *old = scheduler->curr;
-    mutex->locked = 0;
+    tcb *next = (tcb*) m_heap_delete(waiting_jobs);
 
-    // if a thread is waiting on this lock, load that.
-    m_heap *waiting_jobs = hash_find(scheduler->unlockJobs, mutex->id);
-    if (waiting_jobs && !m_heap_is_empty(waiting_jobs)) {
-        // enqueue old job
-        add_job((void*) old, scheduler->m_queue);
-
-        // start next job
-        scheduler->curr = (tcb*) m_heap_delete(waiting_jobs);
-        setAlarm();
-        swapcontext(&old->context, &scheduler->curr->context);
+    // we've emptied it so it should be removed from table
+    if (m_heap_is_empty(waiting_jobs)) {
+        hash_delete(scheduler->unlockJobs, mutex->id);
     }
+
+    add_job((void*) old, scheduler->m_queue);
+
+    SWAP_NEXT_THREAD(old, next);
 
 	return 0;
 };
 
 /* destroy the mutex */
 int my_pthread_mutex_destroy(my_pthread_mutex_t *mutex) {
+    disableAlarm();
+    CONTINUE_CURRENT_THREAD;
 	return 0;
 };
 

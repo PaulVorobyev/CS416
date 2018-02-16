@@ -68,6 +68,7 @@ int isEmpty(queue * q);
 hash_table * hash_init();
 void hash_insert(hash_table * h, void * t, int id);
 void * hash_find(hash_table * h, int id);
+void hash_delete(hash_table *h, int id);
 
 // Heap
 

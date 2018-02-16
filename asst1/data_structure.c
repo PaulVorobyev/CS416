@@ -117,6 +117,28 @@ void * hash_find(hash_table *h, int id) {
     return t;
 }
 
+void hash_delete(hash_table *h, int id) {
+    int idx = h->hash(id, h->size);
+    node * n  = h->elements[idx]->head;
+    while (n != NULL) {
+        entry * e = (entry *) n->data;
+        if (e->id == id) {
+            queue *q = h->elements[idx];
+
+            if (n->prev) {
+                n->prev->next = n->next;
+            } else {
+                q->head = n->next;
+            }
+
+            q->size -= 1;
+
+            break;
+        }
+        n = n->next;
+    }
+}
+
 /* Max Heap Method implementations */
 
 #define HEAP_BASE_CAPACITY 10

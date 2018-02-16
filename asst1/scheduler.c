@@ -108,6 +108,7 @@ sched *sched_init(int num_queue_levels, int alarm_time_delta,
     scheduler->terminated = hash_init();
     scheduler->unlockJobs = hash_init();
     scheduler->joinJobs = hash_init();
+    scheduler->lockOwners = hash_init();
     
     return scheduler;
 }

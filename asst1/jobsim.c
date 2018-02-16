@@ -203,7 +203,7 @@ void runSim(job **jobs, int jobsLen) {
 void *foo() {
     int i = 0;
     for (i = 0; i < 2000; i++) {
-        printf("foo! %d\n", i);
+        //printf("foo! %d\n", i);
     }
 
     int * result = (int*) malloc(sizeof(int));
@@ -214,7 +214,7 @@ void *foo() {
 void *bar() {
     int i = 0;
     for (i = 0; i < 2000; i++) {
-        printf("bar! %d\n", i);
+        //printf("bar! %d\n", i);
     }
 
     int * result = (int*) malloc(sizeof(int));
@@ -235,6 +235,26 @@ void *take_lock1() {
     puts("TL1 LOCKED MUTEX2!");
 
     my_pthread_mutex_unlock(&mutex2);
+
+    return NULL;
+}
+
+void *p1() {
+    my_pthread_mutex_lock(&mutex1);
+    my_pthread_yield();
+    my_pthread_yield();
+    my_pthread_yield();
+    my_pthread_yield();
+    my_pthread_yield();
+    my_pthread_yield();
+    my_pthread_mutex_unlock(&mutex1);
+
+    return NULL;
+}
+
+void *p2() {
+    my_pthread_mutex_lock(&mutex1);
+    my_pthread_mutex_unlock(&mutex1);
 
     return NULL;
 }
@@ -358,15 +378,31 @@ void test_join(){
 void test_mutex(){
     puts("\nSTART TEST MUTEX");
 
-    puts("INIT MUTEXES");
     my_pthread_mutex_init(&mutex1, NULL);
     my_pthread_mutex_init(&mutex2, NULL);
 
-    puts("SPAWN TWO THREADS");
-    my_pthread_create(&take_lock1, NULL);
-    my_pthread_create(&take_lock2, NULL);
+    my_pthread_t t1 = my_pthread_create(&take_lock1, NULL);
+    my_pthread_t t2 = my_pthread_create(&take_lock2, NULL);
+
+    my_pthread_join(t1, NULL);
+    my_pthread_join(t2, NULL);
 
     puts("END TEST MUTEX");
+}
+
+void test_priority_inversion(){
+    puts("\nSTART TEST PRIORITY INVERSION");
+
+    my_pthread_t pt1 = my_pthread_create(&p1, NULL);
+    my_pthread_yield();
+    my_pthread_yield();
+    my_pthread_yield();
+    my_pthread_t pt2 = my_pthread_create(&p2, NULL);
+
+    my_pthread_join(pt1, NULL);
+    my_pthread_join(pt2, NULL);
+
+    puts("END TEST PRIORITY INVERSION");
 }
 
 int main(int argc, char* argv[]) {
@@ -376,4 +412,5 @@ int main(int argc, char* argv[]) {
     test_m_heap();
     test_join();
     test_mutex();
+    test_priority_inversion();
 }

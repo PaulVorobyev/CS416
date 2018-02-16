@@ -49,6 +49,7 @@ typedef struct scheduler {
     multi_queue * m_queue; // scheduling queue
     hash_table *terminated;
     hash_table *unlockJobs;
+    hash_table *lockOwners;
 
     // TODO: we currently store the joined job in a max heap inside this
     // hash table. this is because I thought there could be multiple jobs
