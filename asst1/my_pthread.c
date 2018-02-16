@@ -63,11 +63,16 @@ void priority_inversion_check() {
             mutex->id);
         if (waiting_jobs) {
             puts("PI!");
+            int old_p_level = scheduler->curr->p_level;
             int highest_p_level = ((tcb*)waiting_jobs->arr[0].data)
                 ->p_level;
             // subtract 1 since the add_job() will add 1
             scheduler->curr->p_level = (highest_p_level > -1 )
                 ? highest_p_level - 1 : -1;
+
+            if (old_p_level < scheduler->curr->p_level) {
+                scheduler->curr->p_level = old_p_level;
+            }
         }
     }
 }
