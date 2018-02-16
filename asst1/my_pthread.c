@@ -40,6 +40,7 @@ void thread_runner(void *(*function)(void*), void *arg);
 
 static sched * scheduler = NULL;
 int timesSwitched = 0; // TODO: debug
+int nextMutexId = 0; // id of next mutex to be created
 
 /* Alarm-related functions */
 
@@ -218,16 +219,65 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
 
 /* initial the mutex lock */
 int my_pthread_mutex_init(my_pthread_mutex_t *mutex, const pthread_mutexattr_t *mutexattr) {
+    *mutex = (my_pthread_mutex_t) {.id = nextMutexId++, .locked = 0};
+
 	return 0;
 };
 
 /* aquire the mutex lock */
 int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
+    disableAlarm();
+
+    tcb *old = (tcb*) scheduler->curr;
+
+    if (!mutex->locked) {
+        mutex->locked = 1;
+        return 0;
+    }
+
+    // add to heap of jobs waiting on this mutex
+    add_waiting_job(scheduler, old, scheduler->unlockJobs, mutex->id);
+
+    tcb *next_job = (tcb*) get_next_job(scheduler->m_queue);
+
+    if (!next_job) {
+        puts("Error: waiting on lock, when you are only thread left");
+        exit(1);
+    }
+
+    // start next job
+    scheduler->curr = next_job;
+    setAlarm();
+    swapcontext(&old->context, &scheduler->curr->context);
+
+    // if we are here it's because we've been swapped in since the mutex
+    // is unlocked, so we take it
+    mutex->locked = 1;
+
 	return 0;
 };
 
 /* release the mutex lock */
 int my_pthread_mutex_unlock(my_pthread_mutex_t *mutex) {
+    disableAlarm();
+
+    printf("MUTEX%d UNLOCKED!", mutex->id + 1);
+
+    tcb *old = scheduler->curr;
+    mutex->locked = 0;
+
+    // if a thread is waiting on this lock, load that.
+    m_heap *waiting_jobs = hash_find(scheduler->unlockJobs, mutex->id);
+    if (waiting_jobs && !m_heap_is_empty(waiting_jobs)) {
+        // enqueue old job
+        add_job((void*) old, scheduler->m_queue);
+
+        // start next job
+        scheduler->curr = (tcb*) m_heap_delete(waiting_jobs);
+        setAlarm();
+        swapcontext(&old->context, &scheduler->curr->context);
+    }
+
 	return 0;
 };
 

@@ -22,6 +22,9 @@
 #include "my_pthread_t.h"
 #include "data_structure.h"
 
+my_pthread_mutex_t mutex1;
+my_pthread_mutex_t mutex2;
+
 typedef struct job {
     int startAfter;
     int duration;
@@ -219,6 +222,40 @@ void *bar() {
     return (void*) result;
 }
 
+void *take_lock1() {
+    my_pthread_mutex_lock(&mutex1);
+    puts("TL1 LOCKED MUTEX1!");
+    
+    my_pthread_yield();
+
+    my_pthread_mutex_unlock(&mutex1);
+
+    puts("TL1 ATTEMPTS TO LOCK MUTEX2!");
+    my_pthread_mutex_lock(&mutex2);
+    puts("TL1 LOCKED MUTEX2!");
+
+    my_pthread_mutex_unlock(&mutex2);
+
+    return NULL;
+}
+
+void *take_lock2() {
+    puts("TL2 ATTEMPTS TO LOCK MUTEX1!");
+    my_pthread_mutex_lock(&mutex1);
+    puts("TL2 LOCKED MUTEX1!");
+
+    my_pthread_mutex_lock(&mutex2);
+    puts("TL2 LOCKED MUTEX2!");
+
+    my_pthread_yield();
+
+    my_pthread_mutex_unlock(&mutex1);
+
+    my_pthread_mutex_unlock(&mutex2);
+
+    return NULL;
+}
+
 void test_queue() {
     puts("\nSTART TEST QUEUE");
 
@@ -300,7 +337,7 @@ void test_m_heap(){
 void test_join(){
     puts("\nSTART TEST JOIN");
 
-    puts("SPAWN TWO THREADS");
+    puts("SPAWN THREE THREADS");
     my_pthread_t f = my_pthread_create(&foo, NULL);
     my_pthread_t b = my_pthread_create(&bar, NULL);
     my_pthread_t b2 = my_pthread_create(&bar, NULL);
@@ -318,10 +355,25 @@ void test_join(){
     puts("END TEST JOIN");
 }
 
+void test_mutex(){
+    puts("\nSTART TEST MUTEX");
+
+    puts("INIT MUTEXES");
+    my_pthread_mutex_init(&mutex1, NULL);
+    my_pthread_mutex_init(&mutex2, NULL);
+
+    puts("SPAWN TWO THREADS");
+    my_pthread_create(&take_lock1, NULL);
+    my_pthread_create(&take_lock2, NULL);
+
+    puts("END TEST MUTEX");
+}
+
 int main(int argc, char* argv[]) {
     test_m_queue();
     test_hash();
     test_queue();
     test_m_heap();
     test_join();
+    test_mutex();
 }
