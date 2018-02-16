@@ -51,10 +51,10 @@ typedef struct scheduler {
     hash_table *unlockJobs;
     hash_table *lockOwners;
 
-    // TODO: we currently store the joined job in a max heap inside this
+    // TODO: we currently store the joined job in a min heap inside this
     // hash table. this is because I thought there could be multiple jobs
     // ,but in actuality, only one job should ever join on a particular thread.
-    // TL;DR we should insert a tcb instead of max heap
+    // TL;DR we should insert a tcb instead of min heap
     hash_table *joinJobs;
 } sched;
 

@@ -1,7 +1,8 @@
 *.swp
 .DS_Store
-jobsim
+benchmark
 *.a
 *.o
 compile_commands.json
 jobsim.dSYM/
+test

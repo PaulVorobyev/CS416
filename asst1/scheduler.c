@@ -112,11 +112,8 @@ sched *sched_init(int num_queue_levels, int alarm_time_delta,
     return scheduler;
 }
 
-// in retrospect, we should have used a min heap since a job with a lower
-// p_level has a higher priority. To fix this, the comparator returns
-// an int > 0 if the p_level of arg1 is lower than arg2
 int job_cmp(void *a, void *b) {
-    return ((tcb*)b)->p_level - ((tcb*)a)->p_level;
+    return ((tcb*)a)->p_level - ((tcb*)b)->p_level;
 }
 
 void add_waiting_job(tcb *t, hash_table *job_table, int id) {

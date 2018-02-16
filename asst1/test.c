@@ -161,8 +161,15 @@ void test_m_heap(){
         m_heap_insert(h, (void*)j);
     }
 
+    // mix ups
+    int nums[] = {50, 6, 25, 7};
+    m_heap_insert(h, (void*)(&nums[0]));
+    m_heap_insert(h, (void*)(&nums[1]));
+    m_heap_insert(h, (void*)(&nums[2]));
+    m_heap_insert(h, (void*)(&nums[3]));
+
     i = 0;
-    for (; i < 20; i++) {
+    for (; i < 24; i++) {
         printf("%d ", *((int*)m_heap_delete(h)));
     }
     puts("");
