@@ -18,8 +18,11 @@ data_structure.o: data_structure.h
 scheduler.o: scheduler.h
 	$(CC) $(CFLAGS) scheduler.c
 
-sim: jobsim.c data_structure.o my_pthread.o scheduler.o
-	$(CC) -pthread -g -o jobsim data_structure.o my_pthread.o scheduler.o jobsim.c
+test: test.c data_structure.o my_pthread.o scheduler.o
+	$(CC) -pthread -g -o test data_structure.o my_pthread.o scheduler.o test.c
+
+benchmark: benchmark.c data_structure.o my_pthread.o scheduler.o
+	$(CC) -pthread -g -o benchmark data_structure.o my_pthread.o scheduler.o benchmark.c
 
 clean:
-	rm -rf testfile *.o *.a jobsim jobsim.dSYM queue_test
+	rm -rf *.o *.a test benchmark

@@ -109,7 +109,7 @@ void alrm_handler(int signo) {
     priority_inversion_check();
 
     tcb *old = scheduler->curr;
-    tcb *next = (tcb*) get_next_job(scheduler->m_queue);
+    tcb *next = get_next_job(scheduler->m_queue);
 
     add_job((void*) old, scheduler->m_queue);
 
@@ -173,7 +173,7 @@ int my_pthread_yield() {
     priority_inversion_check();
 
     tcb *old = scheduler->curr;
-    tcb *next = ((tcb*) get_next_job(scheduler->m_queue));
+    tcb *next = get_next_job(scheduler->m_queue);
 
     add_job((void*) old, scheduler->m_queue);
 
@@ -194,19 +194,16 @@ void my_pthread_exit(void *value_ptr) {
     old->state = Terminated;
     hash_insert(scheduler->terminated, (void*)old, old->id);
 
-    m_heap *joinedJob = (m_heap*) hash_find(scheduler->joinJobs, old->id);
-    hash_delete(scheduler->joinJobs, old->id);
+    tcb *next = remove_waiting_job(scheduler->joinJobs, old->id);
+    if (!next) {
+        next = get_next_job(scheduler->m_queue);
+    }
 
     // if there are no ready threads and noone is joined on this,
     // then exit the process
-    if (is_empty_m_queue(scheduler->m_queue) && m_heap_is_empty(joinedJob)) {
+    if (!next) {
         exit(0);
     }
-
-    // if there is a job joined on this thread, load that
-    // otherwise just load the next one in m_queue
-    tcb* next = (joinedJob) ? (tcb*) m_heap_delete(joinedJob)
-        : (tcb *) get_next_job(scheduler->m_queue);
 
     SET_NEXT_THREAD(next);
 };
@@ -216,7 +213,7 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
     disableAlarm();
 
     tcb *targetThread = (tcb*) hash_find(scheduler->terminated, thread);
-    hash_delete(scheduler->terminated, thread);
+
     if (targetThread) { // already finished
         if (value_ptr) {
             *value_ptr = targetThread->retval;
@@ -227,10 +224,9 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
     }
 
     tcb *old = scheduler->curr;
-    tcb *next = (tcb*) get_next_job(scheduler->m_queue);
+    tcb *next = get_next_job(scheduler->m_queue);
 
-    add_waiting_job(scheduler, old, scheduler->joinJobs,
-        (int)thread);
+    add_waiting_job(old, scheduler->joinJobs, (int)thread);
 
     if (!next) {
         puts("Error: joining when you are only thread left"); // TODO: debug
@@ -248,7 +244,6 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
     disableAlarm();
 
     targetThread = (tcb*) hash_find(scheduler->terminated, thread);
-    hash_delete(scheduler->terminated, thread);
 
     // we messed up. the target thread should be done now
     if (!targetThread) {
@@ -284,9 +279,9 @@ int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
     }
 
     tcb *old = (tcb*) scheduler->curr;
-    tcb *next = (tcb*) get_next_job(scheduler->m_queue);
+    tcb *next = get_next_job(scheduler->m_queue);
 
-    add_waiting_job(scheduler, old, scheduler->unlockJobs, mutex->id);
+    add_waiting_job(old, scheduler->unlockJobs, mutex->id);
 
     if (!next) {
         puts("Error: waiting on lock, when you are only thread left"); // TODO: debug
@@ -318,21 +313,15 @@ int my_pthread_mutex_unlock(my_pthread_mutex_t *mutex) {
     mutex->locked = 0;
     hash_delete(scheduler->lockOwners, scheduler->curr->id);
 
-    m_heap *waiting_jobs = hash_find(scheduler->unlockJobs, mutex->id);
+    tcb *next = remove_waiting_job(scheduler->unlockJobs, mutex->id);
     
     // noone is waiting on this lock so continue running
-    if (!waiting_jobs) {
+    if (!next) {
         CONTINUE_CURRENT_THREAD;
         return 0;
     }
 
     tcb *old = scheduler->curr;
-    tcb *next = (tcb*) m_heap_delete(waiting_jobs);
-
-    // we've emptied it so it should be removed from table
-    if (m_heap_is_empty(waiting_jobs)) {
-        hash_delete(scheduler->unlockJobs, mutex->id);
-    }
 
     add_job((void*) old, scheduler->m_queue);
 
