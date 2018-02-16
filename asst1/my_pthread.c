@@ -19,11 +19,11 @@
 /* Constants */
 
 // number levels in m_queue
-#define NUM_QUEUE_LEVELS 5
+#define NUM_QUEUE_LEVELS 10
 // scale factor for time difference between priority levels
 #define ALARM_TIME_DELTA 25
 // alarm time for highest priority
-#define ALARM_BASE_TIME 200
+#define ALARM_BASE_TIME 100
 // bytes to allocate for thread stack
 #define MEM 64000
 

@@ -7,7 +7,7 @@
  * col1: number of seconds after the sim starts that the 
  * the thread should be created
  *
- * col2: how many seconds it should run
+ * col2: how many times the job should loop
  *
  * col3: number of times thread should yield control
  * (yields will be evenly distributed throughout duration
@@ -23,20 +23,16 @@
 #include "data_structure.h"
 #include <math.h>
 
-// number to be assigned to the next job to finish
-int place = 0; // TODO: not used
+float avg_turnaround_time = 0.0;
 
 typedef struct job {
-    int startAfter; // at what time t the job started
-    int duration; // how long the thread should run
-    int numIOs; // TODO: not used
-    int totalRuntime; // at what time t the job ended
-    int place; // TODO: not used
+    int startAfter; // at what time t (seconds) the job started
+    int duration; // how many times thread should loop
+    unsigned long totalRuntime; // at what time t (microseconds) the job ended
 } job;
 
 typedef struct jobArgs {
   int duration;
-  int numIOs; // TODO: not used
 } jobArgs;
 
 int jobCmp(const void *a, const void *b) {
@@ -69,9 +65,7 @@ int parseJobList(const char *filename, job ***jobsPtr) {
         job *j = (job*) malloc(sizeof(job));
         j->startAfter = startAfter;
         j->duration = duration;
-        j->numIOs = numIOs;
-        j->totalRuntime = 10;
-        j->place = -1;
+        j->totalRuntime = 1ul;
         jobs[jobsLen] = j;
         jobsLen++;
 
@@ -86,21 +80,21 @@ int parseJobList(const char *filename, job ***jobsPtr) {
 
 void printBenchmarks(job **jobs, int jobsLen) {
     int i = 0;
-    const char *border = "##################################";
+    const char *border = "########################################";
     
     puts("");
     puts(border);
 
-    printf("%s\t%s\t%s\t%s\n", "start",
-        "dur", "numIOs", "end");
+    printf("%s\t%s\t%s\n", "start", "loops", "end");
 
     for (; i < jobsLen; i++) {
         job *j = jobs[i];
-        printf("%d\t%d\t%d\t%d\n", j->startAfter,
-            j->duration, j->numIOs, j->totalRuntime);
+        printf("%d\t%d\t%lu\n", j->startAfter, j->duration, j->totalRuntime);
     }
 
     puts(border);
+
+    printf("Average Turnaround Time: %f\n", avg_turnaround_time);
 }
 
 /*
@@ -112,25 +106,21 @@ void printBenchmarks(job **jobs, int jobsLen) {
 void *runJob(void *args) {
     jobArgs *a = (jobArgs*) args;
     int duration = a->duration;
-    //int numIOs = a->numIOs;
 
     struct timeval startTime;
     struct timeval endTime;
-    struct timeval curTime;
     gettimeofday(&startTime, NULL);
-    //double ioInterval = (double) duration / (double) numIOs;
+    int i = 0;
+    int j = 67;
 
-    while (1) {
-        gettimeofday(&curTime, NULL);
-        int curDuration = curTime.tv_sec - startTime.tv_sec;
-        if (curDuration > duration) {
-            break;
-        }
+    while (i < duration) {
+        j = cos(j);
+        i++;
     }
 
     gettimeofday(&endTime, NULL);
-    int *runtime = malloc(sizeof(int));
-    *runtime = endTime.tv_sec - startTime.tv_sec;
+    long *runtime = malloc(sizeof(long));
+    *runtime = endTime.tv_usec - startTime.tv_usec;
 
     return (void*) runtime;
 }
@@ -174,7 +164,6 @@ void runSim(job **jobs, int jobsLen) {
 
             jobArgs *args = (jobArgs*) malloc(sizeof(jobArgs));
             args->duration = jobs[i]->duration;
-            args->numIOs = jobs[i]->numIOs;
 
             thread = my_pthread_create(&runJob, (void*) args);
 
@@ -183,21 +172,39 @@ void runSim(job **jobs, int jobsLen) {
 
             i++;
         }
-
-        sleep(1);
     }
 
     // join on threads
     i = 0;
     while (i < jobsLen) {
-        int *ret_val;
+        unsigned long *ret_val;
 
         my_pthread_join(threads[i], (void**) &ret_val);
-        jobs[i]->totalRuntime = *ret_val + jobs[i]->startAfter;
+        jobs[i]->totalRuntime = *ret_val;
         free(ret_val);
         
         i++;
     }
+
+    // calculate avg_turnaround_time to see how well we did
+    i = 0;
+    while (i < jobsLen) {
+        struct timeval startTime;
+        struct timeval endTime;
+        gettimeofday(&startTime, NULL);
+
+        // run it without threading to see approximately how long it takes
+        // to finish without sharing time with other thraeds
+        runJob((void*) threadArgs[i]);
+
+        gettimeofday(&endTime, NULL);
+        long runtime = endTime.tv_usec - startTime.tv_usec;
+
+        avg_turnaround_time += (float) jobs[i]->totalRuntime / runtime;
+
+        i++;
+    }
+    avg_turnaround_time = (float) avg_turnaround_time / jobsLen;
 
     i = 0;
     free(threads);
