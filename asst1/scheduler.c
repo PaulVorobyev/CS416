@@ -42,16 +42,16 @@ multi_queue * m_queue_init(int num_levels, int time_delta, int base_time){
 void add_job(tcb * element, multi_queue * m_q){
     int curr_level = element->p_level;
 
-    printf ("ADD: curr_level: %d\n", curr_level);
-
     // if on last level, then put on same level
     if(curr_level == m_q->num_levels-1){
-        printf("Add same level\n");
+        printf ("ADD_JOB: curr_level=%d, new_level=%d\n", curr_level,
+            element->p_level);
         queue_enqueue((void*)element, m_q->q_arr[curr_level]);
     }else if (curr_level < m_q->num_levels-1){
         // add job to next level down
         element->p_level += 1;
-        printf("New level: %d\n", element->p_level);
+        printf ("ADD_JOB: curr_level=%d, new_level=%d\n", curr_level,
+            element->p_level);
         queue_enqueue((void*)element, m_q->q_arr[curr_level+1]);
     }else{
         printf("ERROR! You're an idiot\n");

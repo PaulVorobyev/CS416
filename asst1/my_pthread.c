@@ -98,7 +98,7 @@ static void disableAlarm() {
 void alrm_handler(int signo) {
     disableAlarm();
 
-    printf("SWITCH! - %d\n", timesSwitched++); // TODO: debug
+    //printf("SWITCH! - %d\n", timesSwitched++); // TODO: debug
 
     // this is only ready thread, let it keep running
     if (is_empty_m_queue(scheduler->m_queue)) {
@@ -160,24 +160,9 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
 
 /* give CPU pocession to other user level threads voluntarily */
 int my_pthread_yield() {
-    disableAlarm();
-
-    puts("YIELD!"); //TODO: debug
-
-    // this is only thread ready, let it keep running
-    if (is_empty_m_queue(scheduler->m_queue)) {
-        CONTINUE_CURRENT_THREAD;
-        return 0;
-    }
-
-    priority_inversion_check();
-
-    tcb *old = scheduler->curr;
-    tcb *next = get_next_job(scheduler->m_queue);
-
-    add_job((void*) old, scheduler->m_queue);
-
-    SWAP_NEXT_THREAD(old, next);
+    // a yield is essentially a premature timer interrupt
+    // so we can just call the alarm handler
+    alrm_handler(-1);
 
     return 0;
 };
