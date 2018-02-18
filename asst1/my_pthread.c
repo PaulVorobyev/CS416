@@ -27,7 +27,7 @@
 // bytes to allocate for thread stack
 #define MEM 64000
 // number of cycles to bump old jobs
-#define BUMP_CYCLES 20
+#define BUMP_CYCLES 30
 // percentage of priority levels to bump
 #define PERC_BUMP 0.10
 
@@ -115,10 +115,11 @@ void alrm_handler(int signo) {
     priority_inversion_check();
 
     // bump old jobs if needed
-    if (timesSwitched % BUMP_CYCLES == 0){
+    if (timesSwitched == BUMP_CYCLES){
         bump_old_jobs(PERC_BUMP,
                         scheduler->curr,
                         scheduler->m_queue);
+        timesSwitched = 0;
     }
 
     tcb *old = scheduler->curr;

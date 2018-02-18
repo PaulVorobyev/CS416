@@ -95,7 +95,7 @@ void bump_old_jobs(double percentage,
     // Go through each level and dequeue until empty
     for(i = start_level; i < m_q->num_levels; i++){
         q = m_q->q_arr[i];
-        if(!isEmpty(q)){
+        while(!isEmpty(q)){
             // Reset the job to go back to the first level
             curr = (tcb *) queue_dequeue(q);
             curr->p_level = -1;

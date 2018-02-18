@@ -41,7 +41,6 @@ void * queue_dequeue(queue * q) {
         void * data = q->head->data;
 
         if (q->head->next == NULL) { // only 1
-            
             q->head = NULL;
         } else { // 2+
             q->head = q->head->next;
