@@ -39,21 +39,20 @@ multi_queue * m_queue_init(int num_levels, int time_delta, int base_time){
     return q;
 }
 
-// Assume element is always TCB
-void add_job(void * element, multi_queue * m_q){
-    int curr_level = ((tcb *)element)->p_level;
-
-    printf ("ADD: curr_level: %d\n", curr_level);
+void add_job(tcb * element, multi_queue * m_q){
+    int curr_level = element->p_level;
 
     // if on last level, then put on same level
     if(curr_level == m_q->num_levels-1){
-        printf("Add same level\n");
-        queue_enqueue(element, m_q->q_arr[curr_level]);
+        printf ("ADD_JOB: curr_level=%d, new_level=%d\n", curr_level,
+            element->p_level);
+        queue_enqueue((void*)element, m_q->q_arr[curr_level]);
     }else if (curr_level < m_q->num_levels-1){
         // add job to next level down
-        ((tcb *)element)->p_level += 1;
-        printf("New level: %d\n", ((tcb *)element)->p_level);
-        queue_enqueue(element, m_q->q_arr[curr_level+1]);
+        element->p_level += 1;
+        printf ("ADD_JOB: curr_level=%d, new_level=%d\n", curr_level,
+            element->p_level);
+        queue_enqueue((void*)element, m_q->q_arr[curr_level+1]);
     }else{
         printf("ERROR! You're an idiot\n");
     }
@@ -61,14 +60,14 @@ void add_job(void * element, multi_queue * m_q){
     m_q->size += 1;
 }
 
-void * get_next_job(multi_queue * m_q){
+tcb * get_next_job(multi_queue * m_q){
     int i;
-    void * data = NULL;
+    tcb * data = NULL;
     for(i = 0; i < m_q->num_levels; i++){
         queue *q = m_q->q_arr[i];
         if(!isEmpty(q)){
             printf("Grab from queue at level %d\n", i);
-            data = queue_dequeue(q);
+            data = (tcb*) queue_dequeue(q);
             m_q->size -= 1;
             break;
         }
@@ -108,6 +107,7 @@ sched *sched_init(int num_queue_levels, int alarm_time_delta,
     scheduler->terminated = hash_init();
     scheduler->unlockJobs = hash_init();
     scheduler->joinJobs = hash_init();
+    scheduler->lockOwners = hash_init();
     
     return scheduler;
 }
@@ -116,7 +116,7 @@ int job_cmp(void *a, void *b) {
     return ((tcb*)a)->p_level - ((tcb*)b)->p_level;
 }
 
-void add_waiting_job(sched* s, tcb *t, hash_table *job_table, int id) {
+void add_waiting_job(tcb *t, hash_table *job_table, int id) {
     m_heap *jobs = (m_heap*) hash_find(job_table, id);
 
     if (jobs) {
@@ -129,10 +129,21 @@ void add_waiting_job(sched* s, tcb *t, hash_table *job_table, int id) {
     hash_insert(job_table, (void*)jobs, id);
 }
 
-tcb *remove_waiting_job(sched* s, hash_table *job_table, int id) {
+tcb *remove_waiting_job(hash_table *job_table, int id) {
     m_heap *jobs = (m_heap*) hash_find(job_table, id);
 
-    return (!jobs) ? NULL : (tcb*) m_heap_delete(jobs);
+    if (jobs) {
+        tcb *job = (tcb*) m_heap_delete(jobs);
+
+        // if the heap is now empty, remove the entry from the hashtable
+        if (m_heap_is_empty(jobs)) {
+            hash_delete(job_table, id);
+        }
+
+        return job;
+    }
+
+    return NULL;
 }
 
 /* Alarm */

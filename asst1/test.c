@@ -1,0 +1,239 @@
+/*
+ * Unit tests
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "my_pthread_t.h"
+#include "data_structure.h"
+
+/* Globals */
+
+my_pthread_mutex_t mutex1;
+my_pthread_mutex_t mutex2;
+
+/* Test Jobs */
+
+void *foo() {
+    int i = 0;
+    for (i = 0; i < 2000; i++) {
+        //printf("foo! %d\n", i);
+    }
+
+    int * result = (int*) malloc(sizeof(int));
+    *result = 1;
+    return (void*) result;
+}
+
+void *bar() {
+    int i = 0;
+    for (i = 0; i < 2000; i++) {
+        //printf("bar! %d\n", i);
+    }
+
+    int * result = (int*) malloc(sizeof(int));
+    *result = 2;
+    return (void*) result;
+}
+
+void *take_lock1() {
+    my_pthread_mutex_lock(&mutex1);
+    puts("TL1 LOCKED MUTEX1!");
+    
+    my_pthread_yield();
+
+    my_pthread_mutex_unlock(&mutex1);
+
+    puts("TL1 ATTEMPTS TO LOCK MUTEX2!");
+    my_pthread_mutex_lock(&mutex2);
+    puts("TL1 LOCKED MUTEX2!");
+
+    my_pthread_mutex_unlock(&mutex2);
+
+    return NULL;
+}
+
+void *p1() {
+    my_pthread_mutex_lock(&mutex1);
+    my_pthread_yield();
+    my_pthread_yield();
+    my_pthread_yield();
+    my_pthread_yield();
+    my_pthread_yield();
+    my_pthread_yield();
+    my_pthread_mutex_unlock(&mutex1);
+
+    return NULL;
+}
+
+void *p2() {
+    my_pthread_mutex_lock(&mutex1);
+    my_pthread_mutex_unlock(&mutex1);
+
+    return NULL;
+}
+
+void *take_lock2() {
+    puts("TL2 ATTEMPTS TO LOCK MUTEX1!");
+    my_pthread_mutex_lock(&mutex1);
+    puts("TL2 LOCKED MUTEX1!");
+
+    my_pthread_mutex_lock(&mutex2);
+    puts("TL2 LOCKED MUTEX2!");
+
+    my_pthread_yield();
+
+    my_pthread_mutex_unlock(&mutex1);
+
+    my_pthread_mutex_unlock(&mutex2);
+
+    return NULL;
+}
+
+/* Tests */
+
+void test_queue() {
+    puts("\nSTART TEST QUEUE");
+
+    queue * q = queue_init();
+    int i = 0;
+    for (i = 0; i < 10; i++) {
+        int * j = malloc(sizeof(int));
+        *j = i;
+        queue_enqueue(j, q);
+    }
+    
+    for (i = 0; i < 10; i++) {
+        printf("%d ", *((int *) queue_dequeue(q)));
+    }
+    puts("");
+
+    puts("END TEST QUEUE");
+}
+
+void test_hash() {
+    puts("\nSTART TEST HASH");
+
+    hash_table * h = hash_init();
+    int i = 0;
+    for (i = 0; i < 10; i++) {
+        int * j = malloc(sizeof(int));
+        *j = i;
+        hash_insert(h, j, *j);
+    }
+    
+    for (i = 0; i < 10; i++) {
+        printf("%d ", *((int *) hash_find(h, i)));
+    }
+    puts("");
+
+    puts("END TEST HASH");
+}
+
+void test_m_queue(){
+    puts("\nSTART TEST M_QUEUE");
+
+    puts("SPAWN TWO THREADS");
+    my_pthread_create(&foo, NULL);
+    my_pthread_create(&bar, NULL);
+
+    int i = 0;
+    for (; i < 5; i++) {
+        my_pthread_yield();
+    }
+
+    puts("END TEST M_QUEUE");
+}
+
+int int_cmp(void *a, void *b) {
+    return *((int*)a) - *((int*)b);
+}
+
+void test_m_heap(){
+    puts("\nSTART TEST M_HEAP");
+
+    m_heap *h = m_heap_init(int_cmp);
+    
+    int i = 0;
+    for (; i < 20; i++) {
+        int *j = (int*) malloc(sizeof(int));
+        *j = i;
+        m_heap_insert(h, (void*)j);
+    }
+
+    // mix ups
+    int nums[] = {50, 6, 25, 7};
+    m_heap_insert(h, (void*)(&nums[0]));
+    m_heap_insert(h, (void*)(&nums[1]));
+    m_heap_insert(h, (void*)(&nums[2]));
+    m_heap_insert(h, (void*)(&nums[3]));
+
+    i = 0;
+    for (; i < 24; i++) {
+        printf("%d ", *((int*)m_heap_delete(h)));
+    }
+    puts("");
+
+    puts("END TEST M_HEAP");
+}
+
+void test_join(){
+    puts("\nSTART TEST JOIN");
+
+    puts("SPAWN THREE THREADS");
+    my_pthread_t f = my_pthread_create(&foo, NULL);
+    my_pthread_t b = my_pthread_create(&bar, NULL);
+    my_pthread_t b2 = my_pthread_create(&bar, NULL);
+
+    void *f_ret = NULL;
+    void *b_ret = NULL;
+    void *b2_ret = NULL;
+    my_pthread_join(f, &f_ret);
+    my_pthread_join(b, &b_ret);
+    my_pthread_join(b2, &b2_ret);
+
+    printf("Threads returned: %d, %d, %d\n", (*(int*)f_ret),
+        (*(int*)b_ret), (*(int*)b2_ret));
+
+    puts("END TEST JOIN");
+}
+
+void test_mutex(){
+    puts("\nSTART TEST MUTEX");
+
+    my_pthread_mutex_init(&mutex1, NULL);
+    my_pthread_mutex_init(&mutex2, NULL);
+
+    my_pthread_t t1 = my_pthread_create(&take_lock1, NULL);
+    my_pthread_t t2 = my_pthread_create(&take_lock2, NULL);
+
+    my_pthread_join(t1, NULL);
+    my_pthread_join(t2, NULL);
+
+    puts("END TEST MUTEX");
+}
+
+void test_priority_inversion(){
+    puts("\nSTART TEST PRIORITY INVERSION");
+
+    my_pthread_t pt1 = my_pthread_create(&p1, NULL);
+    my_pthread_yield();
+    my_pthread_yield();
+    my_pthread_yield();
+    my_pthread_t pt2 = my_pthread_create(&p2, NULL);
+
+    my_pthread_join(pt1, NULL);
+    my_pthread_join(pt2, NULL);
+
+    puts("END TEST PRIORITY INVERSION");
+}
+
+int main(int argc, char* argv[]) {
+    test_m_queue();
+    test_hash();
+    test_queue();
+    test_m_heap();
+    test_join();
+    test_mutex();
+    test_priority_inversion();
+}

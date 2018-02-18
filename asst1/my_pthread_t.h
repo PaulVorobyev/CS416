@@ -17,7 +17,8 @@ typedef int my_pthread_t;
 
 /* mutex struct definition */
 typedef struct my_pthread_mutex_t {
-	/* add something here */
+    int id;
+    int locked; // 0 = unlocked, 1 = locked
 } my_pthread_mutex_t;
 
 /* create a new thread */

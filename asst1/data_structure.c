@@ -117,7 +117,29 @@ void * hash_find(hash_table *h, int id) {
     return t;
 }
 
-/* Max Heap Method implementations */
+void hash_delete(hash_table *h, int id) {
+    int idx = h->hash(id, h->size);
+    node * n  = h->elements[idx]->head;
+    while (n != NULL) {
+        entry * e = (entry *) n->data;
+        if (e->id == id) {
+            queue *q = h->elements[idx];
+
+            if (n->prev) {
+                n->prev->next = n->next;
+            } else {
+                q->head = n->next;
+            }
+
+            q->size -= 1;
+
+            break;
+        }
+        n = n->next;
+    }
+}
+
+/* Min Heap Method implementations */
 
 #define HEAP_BASE_CAPACITY 10
 
@@ -149,21 +171,21 @@ void m_heap_sift_down(m_heap *h, int idx) {
         return;
     }
 
-    // determine index of larger child
-    int larger_child_idx = -1;
+    // determine index of smaller child
+    int smaller_child_idx = -1;
     if (right_child_idx >= h->size) { // only a left child
-        larger_child_idx = left_child_idx;
+        smaller_child_idx = left_child_idx;
     } else {
-        larger_child_idx = (h->cmp(h->arr[left_child_idx].data,
-            h->arr[right_child_idx].data) > 0)
+        smaller_child_idx = (h->cmp(h->arr[left_child_idx].data,
+            h->arr[right_child_idx].data) < 0)
             ? left_child_idx : right_child_idx;
     }
 
-    // if node is smaller than child, swap values and continue
+    // if node is greater than child, swap values and continue
     // sift down on new child
-    if ((h->cmp(h->arr[idx].data, h->arr[larger_child_idx].data) < 0)) {
-        m_heap_swap(h, idx, larger_child_idx);
-        m_heap_sift_down(h, larger_child_idx);
+    if ((h->cmp(h->arr[idx].data, h->arr[smaller_child_idx].data) > 0)) {
+        m_heap_swap(h, idx, smaller_child_idx);
+        m_heap_sift_down(h, smaller_child_idx);
     }
 }
 
@@ -174,10 +196,10 @@ void m_heap_sift_up(m_heap *h, int idx) {
 
     int parent_idx = (idx - 1) / 2;
 
-    // if node is greater than its parent, swap values and continue
+    // if node is less than its parent, swap values and continue
     // sift up on new parent
     if ((parent_idx >= 0) &&
-        (h->cmp(h->arr[idx].data, h->arr[parent_idx].data) > 0)) {
+        (h->cmp(h->arr[idx].data, h->arr[parent_idx].data) < 0)) {
         m_heap_swap(h, idx, parent_idx);
         m_heap_sift_up(h, parent_idx);
     }
