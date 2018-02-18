@@ -76,6 +76,34 @@ tcb * get_next_job(multi_queue * m_q){
     return data;
 }
 
+void bump_old_jobs(double percentage,
+                    void * element,
+                    multi_queue * m_q){
+    int i;
+    queue * q;
+    tcb * curr;
+    int start_level = ((m_q->num_levels-1) - 
+                        (m_q->num_levels * percentage));
+
+    printf("Start bumping old jobs on level %d\n", start_level);
+    
+    curr = (tcb *) element;
+    if (curr->p_level >= start_level){
+        curr->p_level = -1;
+    }
+
+    // Go through each level and dequeue until empty
+    for(i = start_level; i < m_q->num_levels; i++){
+        q = m_q->q_arr[i];
+        if(!isEmpty(q)){
+            // Reset the job to go back to the first level
+            curr = (tcb *) queue_dequeue(q);
+            curr->p_level = -1;
+            add_job(curr, m_q);
+        }
+    }
+}
+
 int is_empty_m_queue(multi_queue * m_q){ 
     return m_q->size == 0;
 }

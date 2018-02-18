@@ -40,6 +40,7 @@ tcb * get_next_job(multi_queue * m_q);
 int is_empty_m_queue(multi_queue * m_q);
 int get_interval_time(int level, multi_queue * m_q);
 void cleanup_m_queue(multi_queue * m_q);
+void bump_old_jobs(double percentage, void * element, multi_queue * m_q);
 void add_job(tcb * element, multi_queue * m_q);
 
 // Scheduler

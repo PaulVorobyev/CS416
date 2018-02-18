@@ -17,7 +17,7 @@ my_pthread_mutex_t mutex2;
 void *foo() {
     int i = 0;
     for (i = 0; i < 2000; i++) {
-        //printf("foo! %d\n", i);
+        printf("foo! %d\n", i);
     }
 
     int * result = (int*) malloc(sizeof(int));
@@ -28,7 +28,7 @@ void *foo() {
 void *bar() {
     int i = 0;
     for (i = 0; i < 2000; i++) {
-        //printf("bar! %d\n", i);
+        printf("bar! %d\n", i);
     }
 
     int * result = (int*) malloc(sizeof(int));
@@ -136,11 +136,17 @@ void test_m_queue(){
     puts("SPAWN TWO THREADS");
     my_pthread_create(&foo, NULL);
     my_pthread_create(&bar, NULL);
-
+   
     int i = 0;
+    for(; i < 2000; i++){
+        printf("Main %d\n", i);
+    }
+
+    /*
     for (; i < 5; i++) {
         my_pthread_yield();
     }
+    */
 
     puts("END TEST M_QUEUE");
 }
@@ -230,10 +236,12 @@ void test_priority_inversion(){
 
 int main(int argc, char* argv[]) {
     test_m_queue();
+    /*
     test_hash();
     test_queue();
     test_m_heap();
     test_join();
     test_mutex();
     test_priority_inversion();
+    */
 }

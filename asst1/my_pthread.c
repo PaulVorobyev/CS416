@@ -26,6 +26,10 @@
 #define ALARM_BASE_TIME 100
 // bytes to allocate for thread stack
 #define MEM 64000
+// number of cycles to bump old jobs
+#define BUMP_CYCLES 20
+// percentage of priority levels to bump
+#define PERC_BUMP 0.10
 
 /* Globals */
 
@@ -97,6 +101,8 @@ static void disableAlarm() {
 
 void alrm_handler(int signo) {
     disableAlarm();
+    timesSwitched += 1;
+    printf("SWITCH %d\n", timesSwitched);
 
     //printf("SWITCH! - %d\n", timesSwitched++); // TODO: debug
 
@@ -107,6 +113,13 @@ void alrm_handler(int signo) {
     }
 
     priority_inversion_check();
+
+    // bump old jobs if needed
+    if (timesSwitched % BUMP_CYCLES == 0){
+        bump_old_jobs(PERC_BUMP,
+                        scheduler->curr,
+                        scheduler->m_queue);
+    }
 
     tcb *old = scheduler->curr;
     tcb *next = get_next_job(scheduler->m_queue);
