@@ -23,7 +23,7 @@
 // scale factor for time difference between priority levels
 #define ALARM_TIME_DELTA 25
 // alarm time for highest priority
-#define ALARM_BASE_TIME 100
+#define ALARM_BASE_TIME 200
 // bytes to allocate for thread stack
 #define MEM 64000
 // number of cycles to bump old jobs
@@ -141,7 +141,8 @@ void thread_runner(void *(*function)(void*), void *arg) {
 }
 
 /* create a new thread */
-int my_pthread_create(void *(*function)(void*), void * arg) {
+int my_pthread_create(my_pthread_t *id, const pthread_attr_t *attr,
+		void *(*function)(void*), void *arg) {
     disableAlarm();
 
     puts("CREATE!"); // TODO: debug
@@ -169,7 +170,9 @@ int my_pthread_create(void *(*function)(void*), void * arg) {
 
     SWAP_NEXT_THREAD(old, t);
 
-	return t->id;
+	*id = t->id;
+
+	return 0;
 };
 
 /* give CPU pocession to other user level threads voluntarily */

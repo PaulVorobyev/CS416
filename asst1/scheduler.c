@@ -98,6 +98,12 @@ void bump_old_jobs(double percentage,
         while(!isEmpty(q)){
             // Reset the job to go back to the first level
             curr = (tcb *) queue_dequeue(q);
+
+			// since we are removing jobs directly from a queue without using
+			// the `get_next_job` method, we have to manually decrement 
+			// `m_queue->size`
+			m_q->size -= 1;
+
             curr->p_level = -1;
             add_job(curr, m_q);
         }
