@@ -13,5 +13,5 @@ c) ~ Multilevel ~ priority queue
 * ~~double check our function defintions in pthread.h are correct (pthread_create seems off)~~
 * ~~we need macros for all methods in pthread.h, similar to what we did for myMalloc in 211 (also in assignment description)~~
 * ~~possibly improve benchmarker~~ (they just gave us one)
-* make better tests
+* ~~make better tests~~ the benchamrker they gaves is probably good enough for testing
 * free some stuff lol?
