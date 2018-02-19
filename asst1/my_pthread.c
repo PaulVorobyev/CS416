@@ -66,7 +66,7 @@ void priority_inversion_check() {
         m_heap *waiting_jobs = (m_heap*) hash_find(scheduler->unlockJobs,
             mutex->id);
         if (waiting_jobs) {
-            puts("PI!");
+            //puts("PI!");
             int old_p_level = scheduler->curr->p_level;
             int highest_p_level = ((tcb*)waiting_jobs->arr[0].data)
                 ->p_level;
@@ -85,7 +85,7 @@ void priority_inversion_check() {
 
 static void setAlarm() {
     if (scheduler == NULL) {
-        puts("Error: scheduler not initialized");
+        //puts("Error: scheduler not initialized");
         exit(1);
     }
 
@@ -102,7 +102,7 @@ static void disableAlarm() {
 void alrm_handler(int signo) {
     disableAlarm();
     timesSwitched += 1;
-    printf("SWITCH %d\n", timesSwitched);
+    //printf("SWITCH %d\n", timesSwitched);
 
     //printf("SWITCH! - %d\n", timesSwitched++); // TODO: debug
 
@@ -145,7 +145,7 @@ int my_pthread_create(my_pthread_t *id, const pthread_attr_t *attr,
 		void *(*function)(void*), void *arg) {
     disableAlarm();
 
-    puts("CREATE!"); // TODO: debug
+    //puts("CREATE!"); // TODO: debug
 
     tcb * old;
     if (scheduler == NULL) { // should only be executed on first thread create
@@ -188,7 +188,7 @@ int my_pthread_yield() {
 void my_pthread_exit(void *value_ptr) {
     disableAlarm();
 
-    puts("ENTER EXIT!"); //TODO: debug
+    //puts("ENTER EXIT!"); //TODO: debug
 
     // store old thread's ret_val and mark as terminated
     tcb *old = scheduler->curr;
@@ -231,7 +231,7 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
     add_waiting_job(old, scheduler->joinJobs, (int)thread);
 
     if (!next) {
-        puts("Error: joining when you are only thread left"); // TODO: debug
+        //puts("Error: joining when you are only thread left"); // TODO: debug
 
         // just loop infinitely so the user can realize something is wrong
         // and kill the process
@@ -249,7 +249,7 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
 
     // we messed up. the target thread should be done now
     if (!targetThread) {
-        printf("Error: could not find terminated thread: %d", thread);
+        //printf("Error: could not find terminated thread: %d", thread);
         exit(1);
     }
 
@@ -286,7 +286,7 @@ int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
     add_waiting_job(old, scheduler->unlockJobs, mutex->id);
 
     if (!next) {
-        puts("Error: waiting on lock, when you are only thread left"); // TODO: debug
+        //puts("Error: waiting on lock, when you are only thread left"); // TODO: debug
 
         // just loop infinitely so the user can realize something is wrong
         // and kill the process
@@ -310,7 +310,7 @@ int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
 int my_pthread_mutex_unlock(my_pthread_mutex_t *mutex) {
     disableAlarm();
 
-    printf("MUTEX%d UNLOCKED!\n", mutex->id + 1);
+    //printf("MUTEX%d UNLOCKED!\n", mutex->id + 1);
 
     mutex->locked = 0;
     hash_delete(scheduler->lockOwners, scheduler->curr->id);

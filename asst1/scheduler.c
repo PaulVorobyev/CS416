@@ -44,17 +44,17 @@ void add_job(tcb * element, multi_queue * m_q){
 
     // if on last level, then put on same level
     if(curr_level == m_q->num_levels-1){
-        printf ("ADD_JOB: curr_level=%d, new_level=%d\n", curr_level,
-            element->p_level);
+        //printf ("ADD_JOB: curr_level=%d, new_level=%d\n", curr_level,
+            //element->p_level);
         queue_enqueue((void*)element, m_q->q_arr[curr_level]);
     }else if (curr_level < m_q->num_levels-1){
         // add job to next level down
         element->p_level += 1;
-        printf ("ADD_JOB: curr_level=%d, new_level=%d\n", curr_level,
-            element->p_level);
+        //printf ("ADD_JOB: curr_level=%d, new_level=%d\n", curr_level,
+            //element->p_level);
         queue_enqueue((void*)element, m_q->q_arr[curr_level+1]);
     }else{
-        printf("ERROR! You're an idiot\n");
+        //printf("ERROR! You're an idiot\n");
     }
 
     m_q->size += 1;
@@ -66,7 +66,7 @@ tcb * get_next_job(multi_queue * m_q){
     for(i = 0; i < m_q->num_levels; i++){
         queue *q = m_q->q_arr[i];
         if(!isEmpty(q)){
-            printf("Grab from queue at level %d\n", i);
+            //printf("Grab from queue at level %d\n", i);
             data = (tcb*) queue_dequeue(q);
             m_q->size -= 1;
             break;
@@ -85,7 +85,7 @@ void bump_old_jobs(double percentage,
     int start_level = ((m_q->num_levels-1) - 
                         (m_q->num_levels * percentage));
 
-    printf("Start bumping old jobs on level %d\n", start_level);
+    //printf("Start bumping old jobs on level %d\n", start_level);
     
     curr = (tcb *) element;
     if (curr->p_level >= start_level){
