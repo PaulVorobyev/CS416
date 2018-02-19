@@ -153,12 +153,11 @@ void runSim(job **jobs, int jobsLen) {
         int passedTimeToLaunch = (simCurTime.tv_sec - simStartTime.tv_sec) >= jobs[i]->startAfter;
         if (passedTimeToLaunch) {
             my_pthread_t thread;
-            //pthread_attr_t *attr = NULL;
 
             jobArgs *args = (jobArgs*) malloc(sizeof(jobArgs));
             args->duration = jobs[i]->duration;
 
-            thread = my_pthread_create(&runJob, (void*) args);
+            pthread_create(&thread, NULL, &runJob, (void*) args);
 
             threads[i] = thread;
             threadArgs[i] = args;
