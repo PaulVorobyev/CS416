@@ -13,7 +13,6 @@ tcb * tcb_init() {
     getcontext(&(t->context));
     t->id = nextThreadNumber++; // TODO: set id = to address for utility
     t->p_level = -1;
-    t->state = 0;
 
     return t;
 }

@@ -1,24 +1,12 @@
 #include "data_structure.h"
 #include <sys/ucontext.h>
 
-// State
-
-// TODO: do we actually use this?
-typedef enum State {
-    Running,
-    Ready,
-    Terminated,
-    Waiting,
-    Locking
-} state_t;
-
 // Thread Control Block
 
 typedef struct threadControlBlock {
     int id;
     int p_level;
     ucontext_t context;
-    state_t state;
     void * retval; // supplied to pthread_exit
 } tcb;
 

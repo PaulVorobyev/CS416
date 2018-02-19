@@ -193,7 +193,6 @@ void my_pthread_exit(void *value_ptr) {
     // store old thread's ret_val and mark as terminated
     tcb *old = scheduler->curr;
     old->retval = value_ptr;
-    old->state = Terminated;
     hash_insert(scheduler->terminated, (void*)old, old->id);
 
     tcb *next = remove_waiting_job(scheduler->joinJobs, old->id);
