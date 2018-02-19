@@ -12,6 +12,16 @@
 /* include lib header files that you need here: */
 #include <sys/types.h>
 
+/* Macros */
+#define pthread_create(id, attr, fn, arg) my_pthread_create((my_pthread_t*)(id), attr, fn, arg)
+#define pthread_yield() my_pthread_yield()
+#define pthread_exit(value_ptr) my_pthread_exit(value_ptr)
+#define pthread_join(id, value_ptr) my_pthread_join(id, value_ptr)
+#define pthread_mutex_init(mutex, attr) my_pthread_mutex_init((my_pthread_mutex_t*)(mutex), attr)
+#define pthread_mutex_lock(mutex) my_pthread_mutex_lock((my_pthread_mutex_t*)(mutex))
+#define pthread_mutex_unlock(mutex) my_pthread_mutex_unlock((my_pthread_mutex_t*)(mutex))
+#define pthread_mutex_destroy(mutex) my_pthread_mutex_destroy((my_pthread_mutex_t*)(mutex))
+
 /* my_pthread_t type definition */
 typedef int my_pthread_t;
 
@@ -22,7 +32,7 @@ typedef struct my_pthread_mutex_t {
 } my_pthread_mutex_t;
 
 /* create a new thread */
-int my_pthread_create(void *(*function)(void*), void * arg);
+int my_pthread_create(my_pthread_t *id, const pthread_attr_t *attr, void *(*function)(void*), void *arg);
 
 /* give CPU pocession to other user level threads voluntarily */
 int my_pthread_yield();

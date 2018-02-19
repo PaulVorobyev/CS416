@@ -6,3 +6,4 @@ benchmark
 compile_commands.json
 jobsim.dSYM/
 test
+Benchmark/

@@ -17,7 +17,7 @@ my_pthread_mutex_t mutex2;
 void *foo() {
     int i = 0;
     for (i = 0; i < 2000; i++) {
-        //printf("foo! %d\n", i);
+        printf("foo! %d\n", i);
     }
 
     int * result = (int*) malloc(sizeof(int));
@@ -28,7 +28,7 @@ void *foo() {
 void *bar() {
     int i = 0;
     for (i = 0; i < 2000; i++) {
-        //printf("bar! %d\n", i);
+        printf("bar! %d\n", i);
     }
 
     int * result = (int*) malloc(sizeof(int));
@@ -37,55 +37,55 @@ void *bar() {
 }
 
 void *take_lock1() {
-    my_pthread_mutex_lock(&mutex1);
+    pthread_mutex_lock(&mutex1);
     puts("TL1 LOCKED MUTEX1!");
     
-    my_pthread_yield();
+    pthread_yield();
 
-    my_pthread_mutex_unlock(&mutex1);
+    pthread_mutex_unlock(&mutex1);
 
     puts("TL1 ATTEMPTS TO LOCK MUTEX2!");
-    my_pthread_mutex_lock(&mutex2);
+    pthread_mutex_lock(&mutex2);
     puts("TL1 LOCKED MUTEX2!");
 
-    my_pthread_mutex_unlock(&mutex2);
+    pthread_mutex_unlock(&mutex2);
 
     return NULL;
 }
 
 void *p1() {
-    my_pthread_mutex_lock(&mutex1);
-    my_pthread_yield();
-    my_pthread_yield();
-    my_pthread_yield();
-    my_pthread_yield();
-    my_pthread_yield();
-    my_pthread_yield();
-    my_pthread_mutex_unlock(&mutex1);
+    pthread_mutex_lock(&mutex1);
+    pthread_yield();
+    pthread_yield();
+    pthread_yield();
+    pthread_yield();
+    pthread_yield();
+    pthread_yield();
+    pthread_mutex_unlock(&mutex1);
 
     return NULL;
 }
 
 void *p2() {
-    my_pthread_mutex_lock(&mutex1);
-    my_pthread_mutex_unlock(&mutex1);
+    pthread_mutex_lock(&mutex1);
+    pthread_mutex_unlock(&mutex1);
 
     return NULL;
 }
 
 void *take_lock2() {
     puts("TL2 ATTEMPTS TO LOCK MUTEX1!");
-    my_pthread_mutex_lock(&mutex1);
+    pthread_mutex_lock(&mutex1);
     puts("TL2 LOCKED MUTEX1!");
 
-    my_pthread_mutex_lock(&mutex2);
+    pthread_mutex_lock(&mutex2);
     puts("TL2 LOCKED MUTEX2!");
 
-    my_pthread_yield();
+    pthread_yield();
 
-    my_pthread_mutex_unlock(&mutex1);
+    pthread_mutex_unlock(&mutex1);
 
-    my_pthread_mutex_unlock(&mutex2);
+    pthread_mutex_unlock(&mutex2);
 
     return NULL;
 }
@@ -134,13 +134,20 @@ void test_m_queue(){
     puts("\nSTART TEST M_QUEUE");
 
     puts("SPAWN TWO THREADS");
-    my_pthread_create(&foo, NULL);
-    my_pthread_create(&bar, NULL);
-
+	my_pthread_t t;
+    pthread_create(&t, NULL, &foo, NULL);
+    pthread_create(&t, NULL, &bar, NULL);
+   
     int i = 0;
-    for (; i < 5; i++) {
-        my_pthread_yield();
+    for(; i < 2000; i++){
+        printf("Main %d\n", i);
     }
+
+    /*
+    for (; i < 5; i++) {
+        pthread_yield();
+    }
+    */
 
     puts("END TEST M_QUEUE");
 }
@@ -181,16 +188,17 @@ void test_join(){
     puts("\nSTART TEST JOIN");
 
     puts("SPAWN THREE THREADS");
-    my_pthread_t f = my_pthread_create(&foo, NULL);
-    my_pthread_t b = my_pthread_create(&bar, NULL);
-    my_pthread_t b2 = my_pthread_create(&bar, NULL);
+	my_pthread_t f, b, b2;
+    pthread_create(&f, NULL, &foo, NULL);
+    pthread_create(&b, NULL, &bar, NULL);
+	pthread_create(&b2, NULL, &bar, NULL);
 
     void *f_ret = NULL;
     void *b_ret = NULL;
     void *b2_ret = NULL;
-    my_pthread_join(f, &f_ret);
-    my_pthread_join(b, &b_ret);
-    my_pthread_join(b2, &b2_ret);
+    pthread_join(f, &f_ret);
+    pthread_join(b, &b_ret);
+    pthread_join(b2, &b2_ret);
 
     printf("Threads returned: %d, %d, %d\n", (*(int*)f_ret),
         (*(int*)b_ret), (*(int*)b2_ret));
@@ -201,14 +209,15 @@ void test_join(){
 void test_mutex(){
     puts("\nSTART TEST MUTEX");
 
-    my_pthread_mutex_init(&mutex1, NULL);
-    my_pthread_mutex_init(&mutex2, NULL);
+    pthread_mutex_init(&mutex1, NULL);
+    pthread_mutex_init(&mutex2, NULL);
 
-    my_pthread_t t1 = my_pthread_create(&take_lock1, NULL);
-    my_pthread_t t2 = my_pthread_create(&take_lock2, NULL);
+	my_pthread_t t1, t2;
+    pthread_create(&t1, NULL, &take_lock1, NULL);
+    pthread_create(&t2, NULL, &take_lock2, NULL);
 
-    my_pthread_join(t1, NULL);
-    my_pthread_join(t2, NULL);
+    pthread_join(t1, NULL);
+    pthread_join(t2, NULL);
 
     puts("END TEST MUTEX");
 }
@@ -216,24 +225,28 @@ void test_mutex(){
 void test_priority_inversion(){
     puts("\nSTART TEST PRIORITY INVERSION");
 
-    my_pthread_t pt1 = my_pthread_create(&p1, NULL);
-    my_pthread_yield();
-    my_pthread_yield();
-    my_pthread_yield();
-    my_pthread_t pt2 = my_pthread_create(&p2, NULL);
+	my_pthread_t pt1;
+    pthread_create(&pt1, NULL, &p1, NULL);
+    pthread_yield();
+    pthread_yield();
+    pthread_yield();
+	my_pthread_t pt2;
+    pthread_create(&pt2, NULL, &p2, NULL);
 
-    my_pthread_join(pt1, NULL);
-    my_pthread_join(pt2, NULL);
+    pthread_join(pt1, NULL);
+    pthread_join(pt2, NULL);
 
     puts("END TEST PRIORITY INVERSION");
 }
 
 int main(int argc, char* argv[]) {
     test_m_queue();
+    
     test_hash();
     test_queue();
     test_m_heap();
     test_join();
     test_mutex();
     test_priority_inversion();
+    
 }
