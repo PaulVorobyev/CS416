@@ -38,7 +38,8 @@ void * queue_dequeue(queue * q) {
         //puts("I HAVE NOTHING!");
         return NULL;
     } else {
-        void * data = q->head->data;
+        node * n = q->head;
+        void * data = n->data;
 
         if (q->head->next == NULL) { // only 1
             q->head = NULL;
@@ -47,8 +48,9 @@ void * queue_dequeue(queue * q) {
             q->head->prev = NULL;
         }
 
+        free(n);
         q->size -= 1;
-        
+
         return data;
     }
 }
@@ -90,6 +92,11 @@ hash_table * hash_init() {
         i++;
     }
     return h;
+}
+
+void free_hash(hash_table * h){
+    free_queue_arr(elements);
+    free(h);
 }
 
 void hash_insert(hash_table * h, void * t, int id) {

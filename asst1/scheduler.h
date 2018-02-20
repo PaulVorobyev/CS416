@@ -31,6 +31,10 @@ void cleanup_m_queue(multi_queue * m_q);
 void bump_old_jobs(double percentage, void * element, multi_queue * m_q);
 void add_job(tcb * element, multi_queue * m_q);
 
+void free_m_queue();
+void free_queue_arr(queue ** arr, int len);
+
+
 // Scheduler
 
 typedef struct scheduler {
@@ -51,4 +55,5 @@ sched *sched_init(int num_queue_levels, int alarm_time_delta,
     int alarm_base_time);
 void add_waiting_job(tcb *t, hash_table *jobs, int id);
 tcb *remove_waiting_job(hash_table *jobs, int id);
+void free_scheduler();
 
