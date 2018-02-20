@@ -2,9 +2,9 @@
 // Author:	Yujie REN
 // Date:	09/23/2017
 
-// name:
-// username of iLab:
-// iLab Server:
+// name: Olaolu Emmanuel, Jamie Liao, Paul Vorobyev
+// username of iLab: ooe4, jl1806, pv149
+// iLab Server: python
 
 #include "my_pthread_t.h"
 #include <unistd.h>
