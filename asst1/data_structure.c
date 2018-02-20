@@ -95,7 +95,7 @@ hash_table * hash_init() {
 }
 
 void free_hash(hash_table * h){
-    free_queue_arr(elements);
+    free_queue_arr(h->elements, h->size);
     free(h);
 }
 

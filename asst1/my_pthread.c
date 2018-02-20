@@ -21,9 +21,9 @@
 // number levels in m_queue
 #define NUM_QUEUE_LEVELS 10
 // scale factor for time difference between priority levels
-#define ALARM_TIME_DELTA 25
+#define ALARM_TIME_DELTA 250
 // alarm time for highest priority
-#define ALARM_BASE_TIME 200
+#define ALARM_BASE_TIME 20000
 // bytes to allocate for thread stack
 #define MEM 64000
 // number of cycles to bump old jobs
@@ -153,6 +153,9 @@ int my_pthread_create(my_pthread_t *id, const pthread_attr_t *attr,
         scheduler = sched_init(NUM_QUEUE_LEVELS, ALARM_TIME_DELTA,
             ALARM_BASE_TIME);
         signal(SIGALRM, alrm_handler);
+
+        // register end function to call when process is about to end
+        atexit(free_scheduler);
     } else {
         old = scheduler->curr;
     }
@@ -266,7 +269,6 @@ int my_pthread_mutex_init(my_pthread_mutex_t *mutex, const pthread_mutexattr_t *
 
 	return 0;
 };
-
 /* aquire the mutex lock */
 int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
     disableAlarm();
@@ -338,3 +340,21 @@ int my_pthread_mutex_destroy(my_pthread_mutex_t *mutex) {
 	return 0;
 };
 
+void free_scheduler(){
+    printf("FREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEDOM\n");
+    // Free Multi level queue
+    free_m_queue(scheduler->m_queue);
+    printf("1\n"); 
+
+    // Clean up hash_tables
+    free_hash(scheduler->terminated);
+    printf("2\n"); 
+    free_hash(scheduler->unlockJobs);
+    printf("3\n"); 
+    free_hash(scheduler->joinJobs);
+    printf("4\n"); 
+    free_hash(scheduler->lockOwners);
+    printf("5\n"); 
+    free(scheduler);
+    printf("6\n"); 
+}

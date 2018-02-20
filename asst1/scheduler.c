@@ -120,20 +120,25 @@ int get_interval_time(int level, multi_queue * m_q){
     return m_q->base_time + (m_q->interval_time_delta * level);
 }
 
-void free_m_queue(){
-    free_queue_arr(scheduler->m_queue->q_arr, scheduler->m_queue->num_levels);
-    free(scheduler->m_queue->q_arr);
-    free(scheduler->m_queue);
+void free_m_queue(multi_queue * m_q){
+    free_queue_arr(m_q->q_arr, m_q->num_levels);
+    free(m_q->q_arr);
+    free(m_q);
 }
 
 void free_queue_arr(queue ** q_arr, int len){
     int i;
+    void * data;
 
     // Free queue itself
     for(i = 0; i < len; i++){
         queue * q = q_arr[i];
+        if(!q){
+            continue;
+        }
+
         while(!isEmpty(q)){
-            void * data = queue_dequeue(q);
+            data = queue_dequeue(q);
             free(data);
         }
         free(q);
@@ -191,17 +196,6 @@ tcb *remove_waiting_job(hash_table *job_table, int id) {
     return NULL;
 }
 
-void free_scheduler(){
-    // Free Multi level queue
-    cleanup_m_queue(scheduler->m_queue);
-
-    // Clean up hash_tables
-    free_hash(scheduler->terminated);
-    free_hash(scheduler->unlockJobs);
-    free_hash(scheduler->joinJobs);
-    free_hash(scheduler->lockOwners);
-    free(scheduler);
-}
 
 /* Alarm */
 
