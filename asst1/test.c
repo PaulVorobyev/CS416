@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "my_pthread_t.h"
-#include "data_structure.h"
+#include "../common/data_structure.h"
 
 #include "../asst2/my_malloc.h"
 

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "my_malloc.h"
+#include "data_structure.h"
 
 //no semicolon after #define
 #define ARRAYSIZE 8388608
@@ -29,6 +30,7 @@ char *expand(MemEntry last, size_t x, char *file, size_t line){
 
 
 void * mymalloc(size_t size, const char * file, int line, int flag) {
+    hash_table * h = hash_init();
     size_t x = size;
     if((int)x <= 0){
         /*fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line); */

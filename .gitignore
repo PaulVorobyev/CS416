@@ -5,5 +5,7 @@ benchmark
 *.o
 compile_commands.json
 jobsim.dSYM/
+*.dSYM/
 test
+benchmark
 Benchmark/
