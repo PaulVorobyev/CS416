@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "../asst2/my_malloc.h"
+
 /* Thread Control Block */
 
 // id to be used for next new thread

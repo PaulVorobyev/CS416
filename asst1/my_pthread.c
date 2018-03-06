@@ -16,6 +16,8 @@
 #include "data_structure.h"
 #include "scheduler.h"
 
+#include "../asst2/my_malloc.h"
+
 /* Constants */
 
 // number levels in m_queue

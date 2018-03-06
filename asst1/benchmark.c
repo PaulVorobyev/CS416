@@ -18,6 +18,8 @@
 #include "my_pthread_t.h"
 #include <math.h>
 
+#include "../asst2/my_malloc.h"
+
 float avg_turnaround_time = 0.0;
 
 typedef struct job {

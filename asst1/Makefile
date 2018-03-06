@@ -10,7 +10,8 @@ my_pthread.a: my_pthread.o data_structure.o scheduler.o
 	$(RANLIB) libmy_pthread.a
 
 my_pthread.o: my_pthread_t.h
-	$(CC) -pthread $(CFLAGS) my_pthread.c
+	$(MAKE) -C ../asst2
+	$(CC) -pthread $(CFLAGS) my_pthread.c -L../asst2 -lmy_malloc
 
 data_structure.o: data_structure.h
 	$(CC) $(CFLAGS) data_structure.c

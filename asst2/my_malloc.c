@@ -3,7 +3,7 @@
 #include "my_malloc.h"
 
 //no semicolon after #define
-#define ARRAYSIZE 5000
+#define ARRAYSIZE 8388608
 #define MEMSIZE sizeof(struct MemEntry_)
 static char ALLMEM[ARRAYSIZE];
 static int initialize = 0;
@@ -13,7 +13,7 @@ char *expand(MemEntry last, size_t x, char *file, size_t line){
     MemEntry i;
     char *tmp = (char *)sbrk(x + MEMSIZE);
     if(!tmp){
-        fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line);
+        /*fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line);*/
         return 0;
     }
     MemEntry ret = (MemEntry)tmp;
@@ -22,7 +22,7 @@ char *expand(MemEntry last, size_t x, char *file, size_t line){
     ret->flag = 1;
     ret->size = x;
     ret->next = NULL;
-    if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); 
+    /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); */
     return (char *)ret + MEMSIZE;
 }
 
@@ -31,7 +31,7 @@ char *expand(MemEntry last, size_t x, char *file, size_t line){
 void * mymalloc(size_t size, const char * file, int line, int flag) {
     size_t x = size;
     if((int)x <= 0){
-        fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line); 
+        /*fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line); */
         return 0;
     }
     //printf("\n\nTEST\n");
@@ -58,7 +58,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
         newNode->next = root->next;
         root->next = newNode;
         //printf("rootsize: %d    nodesize: %d    start: %d   end: %d    retptr: %d\n", root->size, newNode->size, root, (int)(root+1) + x, (int)root+MEMSIZE); 
-        if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); 
+        /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); */
         return (char*)root + MEMSIZE;
     }
 
@@ -68,7 +68,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
         root->size = x;
         root->flag = 1;
         //printf("peanuts\n"); 
-        if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); 
+        /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); */
         return (char*)root + MEMSIZE;
     }
 
@@ -92,7 +92,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
             i->next = newNode;
             newNode->next = NULL;
             //printf("return: %d\n", (int)i+MEMSIZE);
-            if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); 
+            /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); */
             return (char*)i + MEMSIZE;
         }
 
@@ -100,7 +100,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
             //printf("lemons\n"); 
             i->size = x;
             i->flag = 1;
-            if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); 
+            /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); */
             return (char*)i + MEMSIZE;
         }
     } 
@@ -164,6 +164,6 @@ void myfree(void * ptr, const char * file, int line, int flag) {
     }while(i->next);
     //printf("after merge: %d\n", i->size);
 
-    printf("Success! [%s:%d] successfully freed\n", file, line); 
+    /*printf("Success! [%s:%d] successfully freed\n", file, line); */
     return;
 }

@@ -7,6 +7,8 @@
 #include "my_pthread_t.h"
 #include "data_structure.h"
 
+#include "../asst2/my_malloc.h"
+
 /* Globals */
 
 my_pthread_mutex_t mutex1;
