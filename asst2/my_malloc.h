@@ -13,6 +13,8 @@
 
 #include <stdlib.h>
 
+#define LIBRARYREQ 1
+
 struct MemEntry_{
   int flag;
   size_t size;
@@ -22,8 +24,8 @@ struct MemEntry_{
 typedef struct MemEntry_* MemEntry;
 
 //__FILE and __LINE__ are C macros 
-#define malloc(x)   mymalloc((x), __FILE__, __LINE__)
-#define free(x)     myfree((x), __FILE__, __LINE__)
+#define malloc(x)   mymalloc((x), __FILE__, __LINE__, LIBRARYREQ)
+#define free(x)     myfree((x), __FILE__, __LINE__, LIBRARYREQ)
 
 char *expand(MemEntry last, size_t x, char *file, size_t line);
 
