@@ -20,3 +20,4 @@ asst1_benchmark:
 clean:
 	rm -rf asst1/*.o asst1/*.a
 	rm -rf asst2/*.o asst2/*.a
+	rm -rf bin/*.dSYM bin/test bin/benchmark
