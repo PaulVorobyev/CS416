@@ -12,7 +12,11 @@
 #define _GNU_SOURCE
 
 #include <stdlib.h>
-#include "virt_mem.h"
+
+// SYS malloc
+#define LIBRARYREQ 1
+// // USR malloc
+#define THREADREQ 0
 
 
 //__FILE and __LINE__ are C macros 

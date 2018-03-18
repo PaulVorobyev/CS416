@@ -1,16 +1,11 @@
 #include <stddef.h>
-#include "data_structure.h"
 
-// SYS malloc
-#define LIBRARYREQ 1
-// USR malloc
-#define THREADREQ 0
 // Size of total memory array
 #define ARRAY_SIZE 8388608
 // Size of Page struct
 #define PAGE_STRUCT_SIZE sizeof(struct Page_)
 // Size of the system page itself
-//#define PAGE_SIZE sysconf(_SC_PAGESIZE)
+#define PAGE_SIZE sysconf(_SC_PAGE_SIZE)
 
 /* Memory */
 

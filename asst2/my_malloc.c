@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "my_malloc.h"
 #include "data_structure.h"
+#include "virt_mem.h"
 
 //no semicolon after #define
 
