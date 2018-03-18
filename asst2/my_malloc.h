@@ -12,6 +12,7 @@
 #define _GNU_SOURCE
 
 #include <stdlib.h>
+#include "virt_mem.h"
 
 
 //__FILE and __LINE__ are C macros 

@@ -181,11 +181,6 @@ tcb *remove_waiting_job(hash_table *job_table, int id) {
     return NULL;
 }
 
-// to be used in VM
-int get_curr_tcb_id(){
-    return scheduler->curr->id;
-}
-
 /* Alarm */
 
 
