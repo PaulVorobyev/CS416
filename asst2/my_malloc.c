@@ -4,167 +4,173 @@
 #include "data_structure.h"
 
 //no semicolon after #define
-#define ARRAYSIZE 8388608
-#define MEMSIZE sizeof(struct MemEntry_)
-static char ALLMEM[ARRAYSIZE];
-static int initialize = 0;
+
+/* Constants */
+// Tell malloc if SYS or USR requesting memory, so put in proper location in MEMARR
+#define LIBRARYREQ 1
+// Size of total memory array
+#define ARRAY_SIZE 8388608
+// Size of Page struct
+#define PAGE_STRUCT_SIZE sizeof(struct Page_)
+// Size of the system page itself
+#define PAGE_SIZE sysconf(_SC_PAGE_SIZE)
+
+/* Globals */
+static mem * memory
+
 
 //function called to add another Mementry if space ran out in char arr
-char *expand(MemEntry last, size_t x, char *file, size_t line){
-    MemEntry i;
-    char *tmp = (char *)sbrk(x + MEMSIZE);
+char *expand(Page last, size_t x, char *file, size_t line){
+    Page i;
+    char *tmp = (char *)sbrk(x + MEM_SIZE);
     if(!tmp){
         /*fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line);*/
         return 0;
     }
-    MemEntry ret = (MemEntry)tmp;
+    Page ret = (Page)tmp;
     last->next = ret;
 
-    ret->flag = 1;
+    ret->is_free = 1;
     ret->size = x;
     ret->next = NULL;
     /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); */
-    return (char *)ret + MEMSIZE;
+    return (char *)ret + MEM_SIZE;
+}
+
+void mem_init(){
+    printf("Create first memory\n");
+    page_table = hash_init();
+    root->id = -1;
+    root->is_free = 0; //0 means free
+    root->size = ARRAY_SIZE-MEM_SIZE;
+    root->next = NULL;
 }
 
 
-
 void * mymalloc(size_t size, const char * file, int line, int flag) {
-    hash_table * h = hash_init();
-    size_t x = size;
-    if((int)x <= 0){
+    printf("Start Malloc\n");
+    size_t req_size = size;
+    if((int)req_size <= 0){
         /*fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line); */
         return 0;
     }
-    //printf("\n\nTEST\n");
-    MemEntry i; 
-    MemEntry root = (MemEntry)ALLMEM;
+    Page curr_page; 
+    Page root = (Page)ALLMEM;
     int newSize = 0;
 
-    if(!initialize){
-        root->flag = 0; //0 means free
-        root->size = ARRAYSIZE-MEMSIZE;
-        root->next = NULL;
-        initialize = 1;
-        //printf("peaches\n"); 
-    }
-
-    if (root->flag == 0 && root->size+MEMSIZE > x){
-        //printf("hi\n"); 
-        newSize = root->size-MEMSIZE-x;
-        root->size = x;
-        root->flag = 1;
-        MemEntry newNode =(MemEntry)((char*)root+MEMSIZE+x);
+    // Create first all-free pages
+    if (root->is_free && root->size+MEM_SIZE > req_size){
+        printf("Create a new Page\n"); 
+        newSize = root->size-MEM_SIZE-req_size;
+        root->size = req_size;
+        root->is_free = 0;
+        Page newNode =(Page)((char*)root+MEM_SIZE+req_size);
+        newNode->id = get_curr_tcb_id();
         newNode->size = newSize;
-        newNode->flag = 0;
+        newNode->is_free = 1;
         newNode->next = root->next;
         root->next = newNode;
-        //printf("rootsize: %d    nodesize: %d    start: %d   end: %d    retptr: %d\n", root->size, newNode->size, root, (int)(root+1) + x, (int)root+MEMSIZE); 
-        /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); */
-        return (char*)root + MEMSIZE;
+        //printf("rootsize: %d    nodesize: %d    start: %d   end: %d    retptr: %d\n", root->size, newNode->size, root, (int)(root+1) + x, (int)root+MEM_SIZE); 
+        /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)req_size); */
+        return (char*)root + MEM_SIZE;
     }
 
-    //printf("pineapple\n"); 
 
-    if (root->flag == 0 && root->size == x){
-        root->size = x;
-        root->flag = 1;
-        //printf("peanuts\n"); 
-        /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); */
-        return (char*)root + MEMSIZE;
+    if (root->is_free && root->size == req_size){
+        root->size = req_size;
+        root->is_free = 0;
+        /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)req_size); */
+        return (char*)root + MEM_SIZE;
     }
 
-    //printf("kiwi\n"); 
 
-    for (i = root; ; i=i->next){
-        //printf("kumquat: %d    wanted: %d     size: %d\n", (int)i,x, i->size); 
+    for (curr_page = root; ; curr_page=curr_page->next){
+        //printf("kumquat: %d    wanted: %d     size: %d\n", (int)i,req_size, curr_page->size); 
 
-        if(x > i->size && !i->next && i->flag == 0)
-            return expand(i, x, file, line);
-
-        if (i->flag == 0 && i->size+MEMSIZE > x){
+        if (curr_page->is_free && curr_page->size+MEM_SIZE > req_size){
             //printf("starfruit\n"); 
-            newSize = i->size-MEMSIZE-x;
-            i->size = x;
-            i->flag = 1;
-            MemEntry newNode = (MemEntry)((char*)i+MEMSIZE+x);
+            newSize = curr_page->size - MEM_SIZE - req_size;
+            curr_page->size = req_size;
+            curr_page->is_free = 0;
+            Page newNode = (Page)((char*)curr_page + MEM_SIZE + req_size);
             //printf("newsize: %d\n", newSize);
+            newNode->id = get_curr_tcb_id();
             newNode->size = newSize;
-            newNode->flag = 0;
-            i->next = newNode;
+            newNode->is_free = 1;
+            curr_page->next = newNode;
             newNode->next = NULL;
-            //printf("return: %d\n", (int)i+MEMSIZE);
-            /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); */
-            return (char*)i + MEMSIZE;
+            //printf("return: %d\n", (int)i+MEM_SIZE);
+            /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)req_size); */
+            return (char*)curr_page + MEM_SIZE;
         }
 
-        if (i->flag == 0 && i->size == x){
+        if (curr_page->is_free && curr_page->size == req_size){
             //printf("lemons\n"); 
-            i->size = x;
-            i->flag = 1;
-            /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); */
-            return (char*)i + MEMSIZE;
+            curr_page->size = req_size;
+            curr_page->is_free = 0;
+            /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)req_size); */
+            return (char*)curr_page + MEM_SIZE;
         }
     } 
     return 0;
 }
 
 void myfree(void * ptr, const char * file, int line, int flag) {
-    MemEntry i, root;   
-    root = (MemEntry)ALLMEM;
-    //input = (MemEntry)((char*)ptr-MEMSIZE);
+    Page curr_page, root;   
+    root = (Page)ALLMEM;
+    //input = (Page)((char*)ptr-MEM_SIZE);
     if (!ptr){
         fprintf(stderr, "Error! Ptr does not exist in [%s:%d]\n", file, line); 
         return;
     }
     //if address DOES NOT exist within the memory block
-    if (&ptr <= &ALLMEM+MEMSIZE && &ptr >= &ALLMEM+(ARRAYSIZE-MEMSIZE)){
+    if (&ptr <= &ALLMEM+MEM_SIZE && &ptr >= &ALLMEM+(ARRAY_SIZE-MEM_SIZE)){
         fprintf(stderr, "Error! Ptr in [%s:%d] is not contained in memory\n", file, line);
         return;
     }
     //if input + ___
-    for(i = root; ; i = i->next){
-        //printf("i_size: %d\n", i->size); 
-        if(i->next == NULL && i+1 != ptr){
+    for(curr_page = root; ; curr_page = curr_page->next){
+        //printf("i_size: %d\n", curr_page->size); 
+        if(curr_page->next == NULL && curr_page+1 != ptr){
             fprintf(stderr, "Error [%s:%d] had an error in freeing\n", file, line);
             return;
         }
-        if(i+1 == ptr){
+        if(curr_page+1 == ptr){
             //printf("guava\n"); 
             break;
         }
     }
 
-    //if ptr address matches with a MemEntry address in array
-    if(i->flag == 1){
-        i->flag = 0;
+    //if ptr address matches with a Page address in array
+    if(!curr_page->is_free){
+        curr_page->is_free = 1;
     }else{
         fprintf(stderr, "Error! Pointer at [%s:%d] is already free.\n", file, line); 
         return;
     }
 
     //combining multiple free blocks
-    i = root;
+    curr_page = root;
     do{
-        //printf("flag: %d       before merge: %d      nxt: %d\n",i->flag,  i->size, i->next->size);
-        if(i->flag == 0 && i->next->flag == 0){
-            //add the size of the next MemEntry to the current and "deletes" the next MemEntry to allow for rewritinig
-            i->size += i->next->size + MEMSIZE;
+        //printf("flag: %d       before merge: %d      nxt: %d\n",curr_page->is_free,  curr_page->size, curr_page->next->size);
+        if(curr_page->is_free && curr_page->next->is_free){
+            //add the size of the next Page to the current and "deletes" the next Page to allow for rewritinig
+            curr_page->size += curr_page->next->size + MEM_SIZE;
             //if more than 2 MemEntries
-            if(i->next->next){
+            if(curr_page->next->next){
                 //printf("more than 2\n");
-                i->next = i->next->next;
-                i = root; //set i back to root to check thru LL again
+                curr_page->next = curr_page->next->next;
+                curr_page = root; //set curr_page back to root to check thru LL again
                 continue;
             }else{
                 //printf("less than 2\n"); 
-                i->next = NULL;
+                curr_page->next = NULL;
                 break;
             }
         }
-        i = i->next;
-    }while(i->next);
-    //printf("after merge: %d\n", i->size);
+        curr_page = curr_page->next;
+    }while(curr_page->next);
+    //printf("after merge: %d\n", curr_page->size);
 
     /*printf("Success! [%s:%d] successfully freed\n", file, line); */
     return;

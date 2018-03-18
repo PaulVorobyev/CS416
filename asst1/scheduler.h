@@ -51,4 +51,5 @@ sched *sched_init(int num_queue_levels, int alarm_time_delta,
     int alarm_base_time);
 void add_waiting_job(tcb *t, hash_table *jobs, int id);
 tcb *remove_waiting_job(hash_table *jobs, int id);
+int get_curr_tcb_id();
 
