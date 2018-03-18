@@ -2,18 +2,11 @@
 #include <stdio.h>
 #include "my_malloc.h"
 #include "data_structure.h"
+#include "virt_mem.h"
 
 //no semicolon after #define
 
 /* Constants */
-// Tell malloc if SYS or USR requesting memory, so put in proper location in MEMARR
-#define LIBRARYREQ 1
-// Size of total memory array
-#define ARRAY_SIZE 8388608
-// Size of Page struct
-#define PAGE_STRUCT_SIZE sizeof(struct Page_)
-// Size of the system page itself
-#define PAGE_SIZE sysconf(_SC_PAGE_SIZE)
 
 /* Globals */
 static mem * memory
@@ -22,7 +15,7 @@ static mem * memory
 //function called to add another Mementry if space ran out in char arr
 char *expand(Page last, size_t x, char *file, size_t line){
     Page i;
-    char *tmp = (char *)sbrk(x + MEM_SIZE);
+    char *tmp = (char *)sbrk(x + PAGE_STRUCT_SIZE);
     if(!tmp){
         /*fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line);*/
         return 0;
@@ -34,7 +27,7 @@ char *expand(Page last, size_t x, char *file, size_t line){
     ret->size = x;
     ret->next = NULL;
     /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); */
-    return (char *)ret + MEM_SIZE;
+    return (char *)ret + PAGE_STRUCT_SIZE;
 }
 
 void mem_init(){
@@ -42,7 +35,7 @@ void mem_init(){
     page_table = hash_init();
     root->id = -1;
     root->is_free = 0; //0 means free
-    root->size = ARRAY_SIZE-MEM_SIZE;
+    root->size = ARRAY_SIZE-PAGE_STRUCT_SIZE;
     root->next = NULL;
 }
 
@@ -58,50 +51,33 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
     Page root = (Page)ALLMEM;
     int newSize = 0;
 
-    // Create first all-free pages
-    if (root->is_free && root->size+MEM_SIZE > req_size){
-        printf("Create a new Page\n"); 
-        newSize = root->size-MEM_SIZE-req_size;
-        root->size = req_size;
-        root->is_free = 0;
-        Page newNode =(Page)((char*)root+MEM_SIZE+req_size);
-        newNode->id = get_curr_tcb_id();
-        newNode->size = newSize;
-        newNode->is_free = 1;
-        newNode->next = root->next;
-        root->next = newNode;
-        //printf("rootsize: %d    nodesize: %d    start: %d   end: %d    retptr: %d\n", root->size, newNode->size, root, (int)(root+1) + x, (int)root+MEM_SIZE); 
-        /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)req_size); */
-        return (char*)root + MEM_SIZE;
-    }
-
 
     if (root->is_free && root->size == req_size){
         root->size = req_size;
         root->is_free = 0;
         /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)req_size); */
-        return (char*)root + MEM_SIZE;
+        return (char*)root + PAGE_STRUCT_SIZE;
     }
 
 
     for (curr_page = root; ; curr_page=curr_page->next){
         //printf("kumquat: %d    wanted: %d     size: %d\n", (int)i,req_size, curr_page->size); 
 
-        if (curr_page->is_free && curr_page->size+MEM_SIZE > req_size){
+        if (curr_page->is_free && curr_page->size+PAGE_STRUCT_SIZE > req_size){
             //printf("starfruit\n"); 
-            newSize = curr_page->size - MEM_SIZE - req_size;
+            newSize = curr_page->size - PAGE_STRUCT_SIZE - req_size;
             curr_page->size = req_size;
             curr_page->is_free = 0;
-            Page newNode = (Page)((char*)curr_page + MEM_SIZE + req_size);
+            Page newNode = (Page)((char*)curr_page + PAGE_STRUCT_SIZE + req_size);
             //printf("newsize: %d\n", newSize);
             newNode->id = get_curr_tcb_id();
             newNode->size = newSize;
             newNode->is_free = 1;
             curr_page->next = newNode;
             newNode->next = NULL;
-            //printf("return: %d\n", (int)i+MEM_SIZE);
+            //printf("return: %d\n", (int)i+PAGE_STRUCT_SIZE);
             /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)req_size); */
-            return (char*)curr_page + MEM_SIZE;
+            return (char*)curr_page + PAGE_STRUCT_SIZE;
         }
 
         if (curr_page->is_free && curr_page->size == req_size){
@@ -109,7 +85,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
             curr_page->size = req_size;
             curr_page->is_free = 0;
             /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)req_size); */
-            return (char*)curr_page + MEM_SIZE;
+            return (char*)curr_page + PAGE_STRUCT_SIZE;
         }
     } 
     return 0;
@@ -118,13 +94,13 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
 void myfree(void * ptr, const char * file, int line, int flag) {
     Page curr_page, root;   
     root = (Page)ALLMEM;
-    //input = (Page)((char*)ptr-MEM_SIZE);
+    //input = (Page)((char*)ptr-PAGE_STRUCT_SIZE);
     if (!ptr){
         fprintf(stderr, "Error! Ptr does not exist in [%s:%d]\n", file, line); 
         return;
     }
     //if address DOES NOT exist within the memory block
-    if (&ptr <= &ALLMEM+MEM_SIZE && &ptr >= &ALLMEM+(ARRAY_SIZE-MEM_SIZE)){
+    if (&ptr <= &ALLMEM+PAGE_STRUCT_SIZE && &ptr >= &ALLMEM+(ARRAY_SIZE-PAGE_STRUCT_SIZE)){
         fprintf(stderr, "Error! Ptr in [%s:%d] is not contained in memory\n", file, line);
         return;
     }
@@ -155,7 +131,7 @@ void myfree(void * ptr, const char * file, int line, int flag) {
         //printf("flag: %d       before merge: %d      nxt: %d\n",curr_page->is_free,  curr_page->size, curr_page->next->size);
         if(curr_page->is_free && curr_page->next->is_free){
             //add the size of the next Page to the current and "deletes" the next Page to allow for rewritinig
-            curr_page->size += curr_page->next->size + MEM_SIZE;
+            curr_page->size += curr_page->next->size + PAGE_STRUCT_SIZE;
             //if more than 2 MemEntries
             if(curr_page->next->next){
                 //printf("more than 2\n");
