@@ -1,16 +1,27 @@
 #include <stddef.h>
+#include <unistd.h>
 
 // Size of total memory array
 #define ARRAY_SIZE 8388608
 // Size of Page struct
 #define PAGE_STRUCT_SIZE sizeof(struct Page_)
 // Size of the system page itself
-#define PAGE_SIZE sysconf(_SC_PAGE_SIZE)
+//#define PAGE_SIZE sysconf(_SC_PAGE_SIZE) --> GIVES ME COMP TIME ERROR SADDAYS
+#define PAGE_SIZE 4096
 
 /* Memory */
 
-void mem_init(char ** ALLMEM);
-void print_mem(char ** ALLMEM);
+/*
+typedef struct Memory_{
+    char allmem[ARRAY_SIZE];
+    int page_table[(int)(ARRAY_SIZE/PAGE_SIZE)];
+    struct Page_ * last_page;
+} Memory;
+*/
+
+struct Page_ * mem_init(char ** allmem);
+void print_mem(char ** allmem);
+int ceil (double num);
 
 /* Pages */
 

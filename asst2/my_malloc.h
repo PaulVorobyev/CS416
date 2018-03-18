@@ -20,8 +20,8 @@
 
 
 //__FILE and __LINE__ are C macros 
-#define malloc(x)   mymalloc((x), __FILE__, __LINE__, LIBRARYREQ)
-#define free(x)     myfree((x), __FILE__, __LINE__, LIBRARYREQ)
+#define malloc(x)   mymalloc((x), __FILE__, __LINE__, THREADREQ)
+#define free(x)     myfree((x), __FILE__, __LINE__, THREADREQ)
 
 void * mymalloc(size_t size, const char * file, int line, int flag);
 void myfree(void * ptr, const char * file, int line, int flag);
