@@ -53,6 +53,14 @@ typedef struct min_heap_structure {
     int capacity;
 } m_heap;
 
+// Arraylist
+
+typedef struct arraylist_structure_ {
+    void **array;
+    int size;
+    int capacity;
+} array_list;
+
 /* Method definitions */
 
 // Queue
@@ -78,3 +86,11 @@ void m_heap_insert(m_heap *h, void *data);
 void *m_heap_delete(m_heap *h);
 
 #endif
+
+// Arraylist
+
+array_list *array_list_init(int initial_size);
+int array_list_is_empty(array_list *a);
+int array_list_add(array_list *a, void *item);
+int array_list_get(array_list *a, int index);
+
