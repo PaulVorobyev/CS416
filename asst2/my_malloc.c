@@ -14,6 +14,7 @@
 static char allmem[ARRAY_SIZE];
 // page table where index = tcb_id and element = index# of page in allmem
 static int page_table[(int)(ARRAY_SIZE/PAGE_SIZE)];
+Page * page_mdata = NULL;
 Page * last_page = NULL;
 
 void * mymalloc(size_t size, const char * file, int line, int flag) {
@@ -23,7 +24,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
         return 0;
     }
 
-    if (!last_page){
+    if (!page_mdata){
         last_page = mem_init(allmem);
     }
 

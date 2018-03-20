@@ -2,8 +2,30 @@
 
 /* Memory */
 
-Page * mem_init(char ** allmem){
-    printf("Creating memory\n");
+void mem_init(char ** allmem){
+    void * end_of_mdata = create_mdata(allmem);
+    create_pagetable(allmem, end_of_mdata);
+    
+    return ;
+}
+
+PTE ** create_pagetable(char ** allmem, void * end_of_mdata){
+    // assume at this point, we only have 1 "thread" which is SYS
+    // anything that's SYS, would belong to the first row/index
+    PTE **page_table = (PTE**) end_of_mdata;
+    PTE * pte_ptr = page_table + 1;
+    *pte_ptr = (PTE) {
+        .page_index = 0,
+        .page_loc = 0,
+        .next = 0 };
+    PTE * front = (PTE *) (end_of_mdata);
+    PTE * page_table[1];
+    page_table[1] = 
+    
+}
+
+void * create_mdata(char ** allmem){
+    printf("Creating page meta data \n");
 
     printf("Page size: %d\n", sysconf( _SC_PAGE_SIZE));
     int i;
@@ -11,14 +33,14 @@ Page * mem_init(char ** allmem){
     Page * curr_page = root;
     Page * prev_page = NULL;
 
-    // Populate the hash table with all empty pages
+    // Populate the page metadata (in OS land) with all empty pages
     for(i = 0; i < (int)(ARRAY_SIZE/PAGE_SIZE); i++){
         printf("i: %d\n", i);
         // Create page- Assuming that metadata is part of the page size
         curr_page->id = -1;
         curr_page->is_free = 1;
-        curr_page->mem_free = PAGE_SIZE - PAGE_STRUCT_SIZE;
-        curr_page->next = (Page *) ( (char *)curr_page + PAGE_SIZE);
+        curr_page->mem_free = PAGE_SIZE;
+        curr_page->next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE);
         curr_page->prev = prev_page;
         curr_page->front = NULL;
         
@@ -27,7 +49,7 @@ Page * mem_init(char ** allmem){
     }
     curr_page->next = NULL;
     print_mem(allmem);
-    return curr_page;
+    return (void *)(curr_page + PAGE_STRUCT_SIZE);
 }
 
 void print_mem(char ** allmem){

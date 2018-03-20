@@ -19,7 +19,9 @@ typedef struct Memory_{
 } Memory;
 */
 
-struct Page_ * mem_init(char ** allmem);
+void mem_init(char ** allmem);
+void create_pagetable(char ** allmem, void * end_of_mdata);
+void * create_mdata(char ** allmem);
 void print_mem(char ** allmem);
 int ceil (double num);
 
@@ -41,6 +43,13 @@ typedef struct Entry_{
     size_t size;
     struct Entry_ * next;
 } Entry;
+
+typedef struct Page_Table_Entry_{
+    // page_table[x] == all of the Page_Table_Entry's with tcb_id x
+    int page_index; // virtual address
+    void * page_loc; // physical address
+    struct Page_Table_Entry_ * next;
+} PTE;
 
 
 Page * create_new_page(int id, int is_free, size_t req_size);
