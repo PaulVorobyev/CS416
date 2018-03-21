@@ -20,11 +20,12 @@
 
 char allmem[ARRAY_SIZE];
 
-void mem_init(char allmem[]);
-void *create_pagetable(char allmem[], void * end_of_mdata);
-void *create_mdata(char allmem[]);
-void print_mem(char ** allmem);
+void mem_init();
+void *create_pagetable(void * end_of_mdata);
+void *create_mdata();
+void print_mem();
 int ceil(double num);
+void *_malloc(int req_pages, int size, int id);
 
 /* Pages */
 
@@ -35,7 +36,7 @@ typedef struct Page_{
     size_t mem_free; // the amount of memory that is free inside this page TODO: do we need?
     struct Page_ * next; //TODO: do we need?
     struct Page_ * prev; //TODO: do we need?
-    struct Entry_ * front; //TODO: do we need?
+    struct Entry_ * front;
     int idx;
     int parent; // for multipage requests, idx of first page
 } Page;

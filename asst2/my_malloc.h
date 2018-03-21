@@ -7,7 +7,7 @@
  */
 
 #ifndef MY_MALLOC_H
-#define MY_MALLOC_HA
+#define MY_MALLOC_H
 
 #define _GNU_SOURCE
 

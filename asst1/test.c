@@ -242,13 +242,14 @@ void test_priority_inversion(){
 }
 
 int main(int argc, char* argv[]) {
-    test_m_queue();
+    /*test_m_queue();
     
     test_hash();
     test_queue();
     test_m_heap();
     test_join();
     test_mutex();
-    test_priority_inversion();
-    
+    test_priority_inversion();*/
+    puts("hello from test!");
+    void* x = malloc(5);
 }

@@ -2,7 +2,6 @@
 #include <stdio.h>
 
 #include "my_malloc.h"
-#include "data_structure.h"
 #include "virt_mem.h"
 
 /* Globals */
@@ -27,7 +26,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
     // if thats not -1, then use it, but if it is
     // then it must be the main thread making the request
     // and its id is (will be) 1
-    int current_thread = 0; // get cur function
+    int current_thread = -1; // TODO: get cur function
     int id = (flag == LIBRARYREQ) ? 0 : 
         (current_thread != -1) ? current_thread : 1; 
 
@@ -40,7 +39,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
 }
 
 void myfree(void * ptr, const char * file, int line, int flag) {
-    int i = 0;
+    /*int i = 0;
     int current_thread = 0; // get cur function
 
     // if its a libraryreq then its sys i.e. 0
@@ -63,7 +62,7 @@ void myfree(void * ptr, const char * file, int line, int flag) {
                 }
 
                 e->is_free = 1;
-                // we _should_ coalesce if possible
+                // TODO: coalesce
                 
                 return;
             }
@@ -74,5 +73,6 @@ void myfree(void * ptr, const char * file, int line, int flag) {
 
     // complain because we cant find it?
 
-    return;
+    return;*/
 }
+
