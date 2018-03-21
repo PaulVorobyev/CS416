@@ -31,7 +31,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
         (current_thread != -1) ? current_thread : 1; 
 
     // the total number of requested pages
-    int req_pages = ceil((double)size_with_entry / (double)PAGE_SIZE);
+    int req_pages = my_ceil((double)size_with_entry / (double)PAGE_SIZE);
 
     void *data = _malloc(req_pages, size_with_entry, id);
 

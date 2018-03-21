@@ -18,10 +18,10 @@ void mem_init(){
 
 void *create_pagetable(void * end_of_mdata){
     printf("Creating page table and SysInfo \n");
-    int prev_remaining_space = ((Entry*)(((char*)end_of_mdata) - sizeof(Entry)))->size;
+    int prev_remaining_space = PAGE_SIZE - sizeof(Entry);
 
     // SysInfo
-    Entry *sys_info_entry = ((Entry*)end_of_mdata) - 1;
+    Entry *sys_info_entry = ((Entry*)end_of_mdata);
     *sys_info_entry = (Entry) {
         .size = sizeof(SysInfo),
         .is_free = 0,
@@ -65,12 +65,15 @@ void *create_pagetable(void * end_of_mdata){
 void *create_mdata(){
     printf("Creating page meta data \n");
     int mdata_size = sizeof(Page) * NUM_PAGES;
+    int pages_needed = my_ceil((double)mdata_size / (double)PAGE_SIZE);
+
+    printf("NUM PAGES FOR MDATA %d", pages_needed);
 
     // make an Entry for mdata
     Entry *mdata_entry = (Entry*) allmem;
     *mdata_entry = (Entry) {
-        .size = mdata_size,
-        .next = (Entry*) allmem + sizeof(Entry) + mdata_size,
+        .size = PAGE_SIZE - sizeof(Entry),
+        .next = NULL,
         .is_free = 0 };
 
     int i;
@@ -80,50 +83,63 @@ void *create_mdata(){
 
     // Populate the page metadata (in OS land) with all empty pages
     for(i = 0; i < NUM_PAGES; i++){
-        *curr_page = (Page) {
-            .id = -1,
-            .is_free = 1,
-            .mem_free = PAGE_SIZE,
-            .next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE),
-            .prev = prev_page,
-            .front = NULL,
-            .idx = -1,
-            .parent = -1 };
+        if (i > 0 && i < pages_needed) {
+            *curr_page = (Page) {
+                .id = 0,
+                .is_free = 0,
+                .mem_free = PAGE_SIZE,
+                .next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE),
+                .prev = prev_page,
+                .front = NULL,
+                .idx = i,
+                .parent = 0 };
+        } else if (i == pages_needed) { // new page where other sys stuff goes
+            *curr_page = (Page) {
+                .id = 0,
+                .is_free = 0,
+                .idx = i,
+                .parent = i,
+                .next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE),
+                .front = (Entry*) (allmem + (PAGE_SIZE * i)) };
+        } else {
+            *curr_page = (Page) {
+                .id = -1,
+                .is_free = 1,
+                .mem_free = PAGE_SIZE,
+                .next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE),
+                .prev = prev_page,
+                .front = NULL,
+                .idx = -1,
+                .parent = -1 };
+        }
         
         prev_page = curr_page;
         curr_page = curr_page->next;
     }
     curr_page->next = NULL;
 
-    // make an Entry for remaining space in Page
-    Entry *remaining_entry = mdata_entry->next;
-    *remaining_entry = (Entry) {
-        .size = PAGE_SIZE - (sizeof(Entry) + mdata_entry->size + sizeof(Entry)),
-        .next = NULL,
-        .is_free = 1 };
-
-    return (void *)(remaining_entry + 1);
+    return (void *)(allmem + (PAGE_SIZE * pages_needed));
 }
 
 void print_mem(){
     printf("############### CURRENT MEMORY LAYOUT ###############");
 
     int i = 0;
-    for (; i < 20; i++) {
+    for (; i < 30; i++) {
         Page p = MDATA[i];
 
-        printf("PAGE #%d", i);
-        printf("page info: id=%d, is_free=%d, idx=%d, parent=%d", p.id, p.is_free, p.idx, p.parent);
+        printf("PAGE #%d\n", i);
+        printf("page info: id=%d, is_free=%d, idx=%d, parent=%d\n", p.id, p.is_free, p.idx, p.parent);
 
         Entry *e = p.front;
 
         if (!e) {
-            printf("\tNO ENTRIES");
+            printf("\tNO ENTRIES\n");
             continue;
         }
 
         while (e) {
-            printf("\tentry info: size=%d, is_free=%d", e->size, e->is_free);
+            printf("\tentry info: size=%d, is_free=%d\n", e->size, e->is_free);
             e = e->next;
         }
     }
@@ -322,7 +338,7 @@ void *_malloc(int req_pages, int size, int id){
     return data;
 }
 
-int ceil(double num){
+int my_ceil(double num){
     if (num == (int)num) {
         return (int)num;
     }
