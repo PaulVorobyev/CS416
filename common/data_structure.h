@@ -91,6 +91,6 @@ void *m_heap_delete(m_heap *h);
 
 array_list *array_list_init(int initial_size);
 int array_list_is_empty(array_list *a);
-int array_list_add(array_list *a, void *item);
-int array_list_get(array_list *a, int index);
+void array_list_add(array_list *a, void *item);
+void *array_list_get(array_list *a, int index);
 

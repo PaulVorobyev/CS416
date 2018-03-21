@@ -5,40 +5,33 @@
 #include "data_structure.h"
 #include "virt_mem.h"
 
-//no semicolon after #define
-
 /* Constants */
+#define SYSINFO ((SysInfo*)allmem[((char*)(((Entry*)allmem)->next + 1)) + sizeof(SysInfo)])
 
 /* Globals */
-// Memory array
 static char allmem[ARRAY_SIZE];
-// page table where index = tcb_id and element = index# of page in allmem
-static int page_table[(int)(ARRAY_SIZE/PAGE_SIZE)];
-Page * page_mdata = NULL;
-Page * last_page = NULL;
+int is_initialized = 0;
 
 void * mymalloc(size_t size, const char * file, int line, int flag) {
     printf("Start Malloc\n");
     if ((int)size <= 0){
-        /*fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line); */
-        return 0;
+        // fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line);
+        return NULL;
     }
 
-    if (!page_mdata){
-        last_page = mem_init(allmem);
+    if (!is_initialized) {
+        mem_init(allmem);
+        is_initialized = 1;
     }
+
+    int size_with_entry = size + sizeof(Entry);
 
     // the total number of requested pages
-    int req_pages = ceil(size/PAGE_SIZE);
-    sys_malloc(allmem, page_table, req_pages);
+    int req_pages = ceil( (double)size_with_entry / (double)PAGE_SIZE);
 
-    if (flag == LIBRARYREQ){
-        
-    } else {
-        
-    }
+    void *data = (flag == LIBRARYREQ) ? sys_malloc() : user_malloc();
 
-    return 0;
+    return data;
 }
 
 void myfree(void * ptr, const char * file, int line, int flag) {

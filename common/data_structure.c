@@ -256,13 +256,15 @@ array_list *array_list_init(int initial_size) {
         .size = 0,
         .capacity = initial_size,
         .array = malloc(sizeof(void*) * initial_size) };
+
+    return a;
 }
 
 int array_list_is_empty(array_list *a) {
     return a->size == 0;
 }
 
-int array_list_add(array_list *a, void *item) {
+void array_list_add(array_list *a, void *item) {
     if (a->size == a->capacity) {
         a->capacity *= 2;
         a->array = realloc(a->array, sizeof(void*) * a->capacity);

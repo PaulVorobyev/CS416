@@ -1,55 +1,108 @@
 #include "virt_mem.h"
 
-/* Memory */
-
-void mem_init(char ** allmem){
+void mem_init(char allmem[]){
     void * end_of_mdata = create_mdata(allmem);
     create_pagetable(allmem, end_of_mdata);
-    
-    return ;
+
+    // claim first page for sys
+    Page *first_page = (Page*) allmem;
+    *first_page = (Page) {
+        .id = 0,
+        .is_free = 0,
+        .idx = 0,
+        .mem_free = PAGE_SIZE,
+        .next = first_page->next,
+        .prev = first_page->prev,
+        .front = (Entry*) allmem };
 }
 
-PTE ** create_pagetable(char ** allmem, void * end_of_mdata){
-    // assume at this point, we only have 1 "thread" which is SYS
-    // anything that's SYS, would belong to the first row/index
-    PTE **page_table = (PTE**) end_of_mdata;
-    PTE * pte_ptr = page_table + 1;
-    *pte_ptr = (PTE) {
+void *create_pagetable(char allmem[], void * end_of_mdata){
+    printf("Creating PT and SysInfo \n");
+    int prev_remaining_space = ((Entry*)(((char*)end_of_mdata) - sizeof(Entry)))->size;
+
+    // SysInfo
+    Entry *sys_info_entry = ((Entry*)end_of_mdata) - 1;
+    *sys_info_entry = (Entry) {
+        .size = sizeof(SysInfo),
+        .is_free = 0,
+        .next = (Entry*) (((char*)(sys_info_entry + 1)) + sizeof(SysInfo)) };
+    SysInfo *info = (SysInfo*) (sys_info_entry + 1);
+    *info = (SysInfo) {
+        .pagetable = (PTE**) (sys_info_entry->next + 1),
+        .mdata = (Page*) (allmem + sizeof(Entry)) };
+
+    // page_table outer
+    Entry *page_table_outer_entry = sys_info_entry->next;
+    *page_table_outer_entry = (Entry) {
+        .size = sizeof(PTE*),
+        .is_free = 0,
+        .next = (Entry*) (((char*)(page_table_outer_entry + 1)) + sizeof(PTE*)) };
+    PTE **page_table_outer = (PTE**) (page_table_outer_entry + 1);
+    *page_table_outer = (PTE*) (((char*)(page_table_outer + 1)) + sizeof(Entry));
+
+    // page_table inner
+    Entry *page_table_inner_entry = page_table_outer_entry->next;
+    *page_table_inner_entry = (Entry) {
+        .size = sizeof(PTE),
+        .is_free = 0,
+        .next = (Entry*) (((char*)(page_table_inner_entry + 1)) + sizeof(PTE)) };
+    page_table_outer[0][0] = (PTE) {
         .page_index = 0,
-        .page_loc = 0,
-        .next = 0 };
-    PTE * front = (PTE *) (end_of_mdata);
-    PTE * page_table[1];
-    page_table[1] = 
-    
+        .page_loc = (void*) allmem,
+        .next = (void*) NULL };
+
+    // remaining space entry
+    Entry *remaining_entry = page_table_inner_entry->next;
+    int size_of_everything_we_made = sizeof(SysInfo) + sizeof(Entry) + sizeof(PTE*) + sizeof(Entry) + sizeof(PTE) + sizeof(Entry);
+    *remaining_entry = (Entry) {
+        .size = prev_remaining_space - size_of_everything_we_made,
+        .is_free = 1,
+        .next = NULL };
+
+    return (void*)(remaining_entry + 1);
 }
 
-void * create_mdata(char ** allmem){
+void *create_mdata(char allmem[]){
     printf("Creating page meta data \n");
+    int num_pages = (int)(ARRAY_SIZE/PAGE_SIZE);
+    int mdata_size = sizeof(Page) * num_pages;
 
-    printf("Page size: %d\n", sysconf( _SC_PAGE_SIZE));
+    // make an Entry for mdata
+    Entry *mdata_entry = (Entry*) allmem;
+    *mdata_entry = (Entry) {
+        .size = mdata_size,
+        .next = (Entry*) allmem + sizeof(Entry) + mdata_size,
+        .is_free = 0 };
+
     int i;
-    Page * root = (Page *)(allmem);
+    Page * root = (Page*) (allmem + sizeof(Entry));
     Page * curr_page = root;
     Page * prev_page = NULL;
 
     // Populate the page metadata (in OS land) with all empty pages
-    for(i = 0; i < (int)(ARRAY_SIZE/PAGE_SIZE); i++){
-        printf("i: %d\n", i);
-        // Create page- Assuming that metadata is part of the page size
-        curr_page->id = -1;
-        curr_page->is_free = 1;
-        curr_page->mem_free = PAGE_SIZE;
-        curr_page->next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE);
-        curr_page->prev = prev_page;
-        curr_page->front = NULL;
+    for(i = 0; i < num_pages; i++){
+        *curr_page = (Page) {
+            .id = -1,
+            .is_free = 1,
+            .mem_free = PAGE_SIZE,
+            .next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE),
+            .prev = prev_page,
+            .front = NULL,
+            .idx = -1 };
         
         prev_page = curr_page;
         curr_page = curr_page->next;
     }
     curr_page->next = NULL;
-    print_mem(allmem);
-    return (void *)(curr_page + PAGE_STRUCT_SIZE);
+
+    // make an Entry for remaining space in Page
+    Entry *remaining_entry = mdata_entry->next;
+    *remaining_entry = (Entry) {
+        .size = PAGE_SIZE - (sizeof(Entry) + mdata_entry->size + sizeof(Entry)),
+        .next = NULL,
+        .is_free = 1 };
+
+    return (void *)(remaining_entry + 1);
 }
 
 void print_mem(char ** allmem){
@@ -75,6 +128,9 @@ void sys_malloc(char ** allmem, int ** page_table, Page * last_page,  int req_pa
     //}
 }
 
+void user_malloc(char ** allmem, int ** page_table, Page * last_page,  int req_pages){
+}
+
 int ceil(double num){
     if (num == (int)num) {
         return (int)num;
@@ -87,3 +143,8 @@ int ceil(double num){
 Page * create_new_page(int id, int is_free, size_t req_size){
     
 }
+
+void* find_page(int id, int size) {
+
+}
+
