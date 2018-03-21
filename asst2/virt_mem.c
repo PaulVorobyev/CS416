@@ -126,20 +126,20 @@ void print_mem(){
 
     int i = 0;
     for (; i < 30; i++) {
-        Page p = MDATA[i];
+        Page *p = &MDATA[i];
 
         printf("PAGE #%d\n", i);
-        printf("page info: id=%d, is_free=%d, idx=%d, parent=%d\n", p.id, p.is_free, p.idx, p.parent);
+        printf("page info: id=%d, is_free=%d, idx=%d, parent=%d\n", p->id, p->is_free, p->idx, p->parent);
 
-        Entry *e = p.front;
+        Entry *e = p->front;
 
         if (!e) {
-            printf("\tNO ENTRIES\n");
+            printf((p->parent != -1) ? "\tPART OF MULTIPAGE MALLOC\n" : "\tNO ENTRIES\n");
             continue;
         }
 
         while (e) {
-            printf("\tentry info: size=%d, is_free=%d\n", e->size, e->is_free);
+            printf("\tentry info: size=%lu, is_free=%d\n", e->size, e->is_free);
             e = e->next;
         }
     }
@@ -193,7 +193,8 @@ void set_parent_page(Page *p, int id, int idx) {
         .id = id,
         .is_free = 0,
         .idx = idx,
-        .parent = idx };
+        .parent = idx
+    };
 }
 
 void set_child_page(Page *p, int id, int idx, int parent) {
@@ -223,12 +224,12 @@ int find_page(int id, int size) {
     int i = 0;
 
     for (i = 0; i < NUM_PAGES; i++) {
-        Page cur = MDATA[i];
+        Page *cur = &MDATA[i];
 
         // if page belongs to someone else, we cant use it
-        if (!is_availible_page(&cur, id)) continue;
+        if (!is_availible_page(cur, id)) continue;
 
-        if (page_is_empty(&cur) || find_mementry(cur.front, size)) {
+        if (page_is_empty(cur) || find_mementry(cur->front, size)) {
             return i;
         }
     }
@@ -237,20 +238,24 @@ int find_page(int id, int size) {
 }
 
 void *single_page_malloc(int size, int id) {
+    printf("single_page_malloc()\n");
+
     int idx = find_page(id, size);
 
     if (idx == -1) return NULL;
 
-    Page p = MDATA[idx];
+    printf("found an entry\n");
 
-    set_parent_page(&p, id, idx);
+    Page *p = &MDATA[idx];
+
+    set_parent_page(p, id, idx);
 
     Entry *e = NULL;
-    if (!p.front) {
-        init_front(&p);
-        e = p.front;
+    if (!p->front) {
+        init_front(p);
+        e = p->front;
     } else {
-        e = find_mementry(p.front, size);
+        e = find_mementry(p->front, size);
     }
 
     if (can_be_split(e, size)) {
@@ -272,15 +277,15 @@ int find_pages(int id, int req_pages, int size) {
 
         for (j = 0; j < req_pages; j++) {
             // cur page
-            Page cur = MDATA[i + j];
+            Page *cur = &MDATA[i + j];
 
             // if page belongs to someone else, we cant use it
-            if (!is_availible_page(&cur, id)) continue;
+            if (!is_availible_page(cur, id)) continue;
 
             // all req_pages, excluding last one, must be full and free
             // this can me an empty page or a page with one entry that is free
             if (j < (req_pages - 1)) {
-                if (!page_is_empty(&cur)) {
+                if (!page_is_empty(cur)) {
                     all_free = 0;
                     break;
                 }
@@ -288,8 +293,8 @@ int find_pages(int id, int req_pages, int size) {
 
             // last page needs size % PAGE_SIZE
             if (j == req_pages - 1) {
-                if (!page_is_empty(&cur)) {
-                    Entry *e = find_mementry(cur.front, size % PAGE_SIZE);
+                if (!page_is_empty(cur)) {
+                    Entry *e = find_mementry(cur->front, size % PAGE_SIZE);
                     if (!e) {
                         all_free = 0;
                         break;
@@ -313,14 +318,14 @@ void *multi_page_malloc(int req_pages, int size, int id) {
 
     int i = 0;
     for (; i < req_pages; i++) {
-        Page cur = MDATA[idx + i];
+        Page *cur = &MDATA[idx + i];
 
         if (i == 0) {
-            set_parent_page(&cur, id, idx);
-            init_front(&cur);
-            cur.front->is_free = 0;
+            set_parent_page(cur, id, idx);
+            init_front(cur);
+            cur->front->is_free = 0;
         } else {
-            set_child_page(&cur, id, idx + i, idx);
+            set_child_page(cur, id, idx + i, idx);
         }
     }
 
@@ -328,7 +333,7 @@ void *multi_page_malloc(int req_pages, int size, int id) {
 }
 
 void *_malloc(int req_pages, int size, int id){
-    printf("System malloc\n");
+    printf("_malloc()\n");
 
     void *data = (req_pages == 1) ? single_page_malloc(size, id)
         : multi_page_malloc(req_pages, size, id);
