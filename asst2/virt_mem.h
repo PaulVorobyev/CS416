@@ -2,17 +2,29 @@
 #include <unistd.h>
 
 // Size of total memory array
-#define ARRAY_SIZE 8388608 //TODO: should this not be 8 miliion flat?
+#define ARRAY_SIZE (8388608)
 // Size of Page struct
-#define PAGE_STRUCT_SIZE sizeof(struct Page_)
+#define PAGE_STRUCT_SIZE (sizeof(struct Page_))
 // Size of the system page itself
 #define PAGE_SIZE (sysconf(_SC_PAGE_SIZE))
+// pointer to SysInfo
+#define SYSINFO ((SysInfo*) &allmem[(int)(((char*)(((Entry*)allmem)->next + 1)) + sizeof(SysInfo))])
+// pointer to pagetable
+#define PAGETABLE (SYSINFO->pagetable)
+// pointer to mdata
+#define MDATA (SYSINFO->mdata)
+// total number of pages in memory
+#define NUM_PAGES ((int)(ARRAY_SIZE/PAGE_SIZE))
+// number of pages allocated for thread with id x
+#define GET_NUM_PTES(x) (((Entry*)(((char*) (&PAGETABLE[x][0])) - sizeof(Entry)))->size / sizeof(PTE))
+
+char allmem[ARRAY_SIZE];
 
 void mem_init(char allmem[]);
-void create_pagetable(char ** allmem, void * end_of_mdata);
-void * create_mdata(char ** allmem);
+void *create_pagetable(char allmem[], void * end_of_mdata);
+void *create_mdata(char allmem[]);
 void print_mem(char ** allmem);
-int ceil (double num);
+int ceil(double num);
 
 /* Pages */
 
@@ -25,6 +37,7 @@ typedef struct Page_{
     struct Page_ * prev; //TODO: do we need?
     struct Entry_ * front; //TODO: do we need?
     int idx;
+    int parent; // for multipage requests, idx of first page
 } Page;
 
 // Sub-data structure within a page
@@ -47,4 +60,3 @@ typedef struct SysInfo_ {
     Page *mdata;
 } SysInfo;
 
-Page * create_new_page(int id, int is_free, size_t req_size);

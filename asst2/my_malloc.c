@@ -5,11 +5,7 @@
 #include "data_structure.h"
 #include "virt_mem.h"
 
-/* Constants */
-#define SYSINFO ((SysInfo*)allmem[((char*)(((Entry*)allmem)->next + 1)) + sizeof(SysInfo)])
-
 /* Globals */
-static char allmem[ARRAY_SIZE];
 int is_initialized = 0;
 
 void * mymalloc(size_t size, const char * file, int line, int flag) {
@@ -26,14 +22,57 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
 
     int size_with_entry = size + sizeof(Entry);
 
-    // the total number of requested pages
-    int req_pages = ceil( (double)size_with_entry / (double)PAGE_SIZE);
+    // if its a libraryreq then its sys i.e. 0
+    // if not, then check what scheduler's curr is.
+    // if thats not -1, then use it, but if it is
+    // then it must be the main thread making the request
+    // and its id is (will be) 1
+    int current_thread = 0; // get cur function
+    int id = (flag == LIBRARYREQ) ? 0 : 
+        (current_thread != -1) ? current_thread : 1; 
 
-    void *data = (flag == LIBRARYREQ) ? sys_malloc() : user_malloc();
+    // the total number of requested pages
+    int req_pages = ceil((double)size_with_entry / (double)PAGE_SIZE);
+
+    void *data = _malloc(req_pages, size_with_entry, id);
 
     return data;
 }
 
 void myfree(void * ptr, const char * file, int line, int flag) {
+    int i = 0;
+    int current_thread = 0; // get cur function
+
+    // if its a libraryreq then its sys i.e. 0
+    // if not, then check what scheduler's curr is.
+    // if thats not -1, then use it, but if it is
+    // then it must be the main thread making the request
+    // and its id is (will be) 1
+    int id = (flag == LIBRARYREQ) ? 0 : 
+        (current_thread != -1) ? current_thread : 1; 
+
+    for (; i < GET_NUM_PTES(id); i++) {
+        Entry *e = PAGETABLE[id][i].front;
+
+        while (e) {
+            if (((void*)(e + 1)) == ptr) {
+                if (e->is_free) {
+                    // complain thats its alrady free?
+                    
+                    return;
+                }
+
+                e->is_free = 1;
+                // we _should_ coalesce if possible
+                
+                return;
+            }
+
+            e = e->next;
+        }
+    }
+
+    // complain because we cant find it?
+
     return;
 }
