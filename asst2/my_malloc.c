@@ -5,6 +5,15 @@
 #include "my_malloc.h"
 #include "virt_mem.h"
 
+/* Defines */
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
+
 /* Globals */
 int is_initialized = 0;
 
@@ -21,12 +30,13 @@ void print_mem(){
         Entry *e = p->front;
 
         if (p->parent != -1 && p->parent != p->idx) {
-            printf("\tPART OF MULTIPAGE MALLOC\n");
+            printf(ANSI_COLOR_RED "\tPART OF MULTIPAGE MALLOC\n" ANSI_COLOR_RESET);
             continue;
         }
 
         while (e) {
-            printf("\tentry info: size=%lu, is_free=%d\n", e->size, e->is_free);
+            printf(e->is_free ? ANSI_COLOR_GREEN : ANSI_COLOR_RED);
+            printf("\tentry info: size=%lu, is_free=%d\n" ANSI_COLOR_RESET, e->size, e->is_free);
             e = e->next;
         }
     }
