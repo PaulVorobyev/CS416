@@ -10,9 +10,8 @@ int is_initialized = 0;
 
 void * mymalloc(size_t size, const char * file, int line, int flag) {
     disableAlarm();
-
-    printf("%d\n", get_curr_tcb_id());
     printf("Start Malloc\n");
+
     if ((int)size <= 0){
         // fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line);
         return NULL;
