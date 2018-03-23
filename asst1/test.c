@@ -245,10 +245,17 @@ void test_malloc_basic() {
     puts("\nSTART TEST BASIC MALLOC");
     
     int i;
-    malloc(10);
-    malloc(10);
-    malloc(10);
-    malloc(10);
+    void *a = malloc(10);
+    void *b = malloc(10);
+    void *c = malloc(10);
+    void *d = malloc(10);
+    free(a);
+    free(b);
+    free(c);
+    free(d);
+
+    void *e = malloc(5500);
+    free(e);
 
     puts("END TEST BASIC MALLOC");
 }

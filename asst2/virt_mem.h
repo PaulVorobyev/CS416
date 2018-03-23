@@ -27,11 +27,6 @@
 // get the length of the pagetable
 #define PAGETABLE_LEN (((Entry*)PAGETABLE - 1)->size / sizeof(PTE*))
 
-void mem_init();
-int my_ceil(double num);
-void *single_page_malloc(int size, int id);
-void *multi_page_malloc(int req_pages, int size, int id);
-
 char *allmem;
 
 /* Pages */
@@ -68,5 +63,14 @@ typedef struct SysInfo_ {
     PTE* *pagetable;
     Page *mdata;
 } SysInfo;
+
+void mem_init();
+int my_ceil(double num);
+void *single_page_malloc(int size, int id);
+void *multi_page_malloc(int req_pages, int size, int id);
+Entry *find_mementry_for_data(Page *p, void* data);
+int is_multipage_malloc(Page *p);
+void coalesce(Entry *e, Entry *prev);
+Entry *get_prev_entry(Page *p, Entry *e);
 
 #endif

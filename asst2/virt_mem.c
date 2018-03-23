@@ -39,6 +39,7 @@ void init_front(Page *p) {
 }
 
 int is_availible_page(Page *p, int id) {
+    printf("id = %d", id);
     return (p->id == -1 || p->id == id) && (p->parent == -1 || p->parent == p->idx);
 }
 
@@ -82,7 +83,10 @@ int find_pages(int id, int req_pages, int size) {
             Page *cur = &MDATA[i + j];
 
             // if page belongs to someone else, we cant use it
-            if (!is_availible_page(cur, id)) continue;
+            if (!is_availible_page(cur, id)) {
+                all_free = 0;
+                break;
+            }
 
             // all req_pages, excluding last one, must be full and free
             if (j < (req_pages - 1)) {
@@ -112,12 +116,35 @@ int find_pages(int id, int req_pages, int size) {
     return -1;
 }
 
+int is_multipage_malloc(Page *p) {
+    return (!p->front->next) && (!p->front->is_free) && (p->next) && (p->next->parent == p->idx);
+}
+
 /* Entry Operations */
 
-void coalesce(Entry *e) {
-    if (e->next->next && e->next->next->is_free) {
-        e->next->size += e->next->next->size + sizeof(Entry);
-        e->next->next = e->next->next->next;
+Entry *get_prev_entry(Page *p, Entry *e) {
+    Entry *cur = p->front;
+    while (cur->next) {
+        if (cur->next == e) return cur;
+
+        cur = cur->next;
+    }
+
+    return NULL;
+}
+
+void coalesce(Entry *e, Entry *prev) {
+    // merge with prev
+    if (prev && prev->is_free) {
+        prev->size += e->size + sizeof(Entry);
+        prev->next = e->next;
+        e = prev;
+    } 
+
+    // merge with next
+    if (e->next && e->next->is_free) {
+        e->size += e->next->size + sizeof(Entry);
+        e->next = e->next->next;
     }
 }
 
@@ -125,10 +152,8 @@ void split(Entry *e, int size) {
     int prev_size = e->size;
     Entry *prev_next = e->next;
 
-    *e = (Entry) {
-        .size = size,
-        .next = (Entry*) (((char*)(e + 1)) + size),
-        .is_free = 0 };
+    e->size = size;
+    e->next = (Entry*) (((char*)(e + 1)) + size);
 
     // remaining space entry
     *e->next = (Entry) {
@@ -150,6 +175,17 @@ Entry *find_mementry(Entry *front, int size) {
         }
 
         cur = cur->next;
+    }
+
+    return NULL;
+}
+
+Entry *find_mementry_for_data(Page *p, void* data) {
+    Entry *e = p->front;
+    while (e) { 
+        if ((void*)(e+1) == data) return e;
+
+        e = e->next;
     }
 
     return NULL;
@@ -209,7 +245,7 @@ void *create_mdata(){
         }
 
         init_front(curr_page);
-        if (i == 0) curr_page->is_free = 0;
+        if (i == 0 || i == pages_needed) curr_page->front->is_free = 0;
         
         prev_page = curr_page;
         curr_page = curr_page->next;
@@ -296,11 +332,8 @@ void *single_page_malloc(int size, int id) {
 
     Entry *e = find_mementry(p->front, size);
 
-    if (can_be_split(e, size)) {
-        split(e, size);
-    } else {
-        e->is_free = 0;
-    }
+    if (can_be_split(e, size)) split(e, size);
+    e->is_free = 0;
 
     return (void*) (e + 1);
 }

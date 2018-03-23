@@ -4,6 +4,7 @@
 #include "../asst1/my_pthread_t.h"
 #include "my_malloc.h"
 #include "virt_mem.h"
+#include <stdint.h>
 
 /* Defines */
 #define ANSI_COLOR_RED     "\x1b[31m"
@@ -38,7 +39,7 @@ void print_mem(){
     printf("\n############### CURRENT MEMORY LAYOUT ###############\n");
 
     int i = 0;
-    for (; i < 30; i++) {
+    for (; i < 33; i++) {
         Page *p = &MDATA[i];
 
         printf("PAGE #%d\n", i);
@@ -98,42 +99,47 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
 }
 
 void myfree(void * ptr, const char * file, int line, int flag) {
-    /*int i = 0;
     disableAlarm();
-    int current_thread = 0; // get cur function
 
-    // if its a libraryreq then its sys i.e. 0
-    // if not, then check what scheduler's curr is.
-    // if thats not -1, then use it, but if it is
-    // then it must be the main thread making the request
-    // and its id is (will be) 1
-    int id = (flag == LIBRARYREQ) ? 0 : 
-        (current_thread != -1) ? current_thread : 1; 
+    intptr_t offset = (intptr_t)ptr - (intptr_t)((void*) allmem);
+    int page_num = offset / PAGE_SIZE;
 
-    for (; i < GET_NUM_PTES(id); i++) {
-        Entry *e = PAGETABLE[id][i].front;
-
-        while (e) {
-            if (((void*)(e + 1)) == ptr) {
-                if (e->is_free) {
-                    // complain thats its alrady free?
-                    
-                    return;
-                }
-
-                e->is_free = 1;
-                // TODO: coalesce
-                
-                return;
-            }
-
-            e = e->next;
-        }
+    if (page_num < 0 || page_num > NUM_PAGES) {
+        printf("ERROR: Invalid pointer given to free. %s:%d", file, line);
+        exit(1);
     }
 
-    // complain because we cant find it?
+    Page *p = &MDATA[page_num];
+    Entry *e = find_mementry_for_data(p, ptr);
 
-    setAlarm();
-    return;*/
+    if (!e) {
+        printf("ERROR: Invalid pointer given to free. %s:%d", file, line);
+        exit(1);
+    }
+
+    if (e->is_free) {
+        printf("ERROR: Attempting to double free. %s:%d", file, line);
+        exit(1);
+    }
+
+    if (is_multipage_malloc(p)) {
+        Page *cur_p = p;
+        while (cur_p->parent == p->idx) {
+            cur_p->is_free = 1;
+            cur_p->parent = cur_p->idx;
+            cur_p->front->is_free = 1;
+            
+            cur_p = cur_p->next;
+        }
+    } else {
+        e->is_free = 1;
+        Entry *prev = get_prev_entry(p, e);
+        coalesce(e, prev);
+    }
+
+    print_mem();
+    print_pagetable();
+
+    //setAlarm();
 }
 
