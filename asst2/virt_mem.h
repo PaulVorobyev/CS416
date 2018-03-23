@@ -12,6 +12,8 @@
 #define PAGE_SIZE (sysconf(_SC_PAGE_SIZE))
 // total number of pages in memory
 #define NUM_PAGES ((int)(ARRAY_SIZE/PAGE_SIZE))
+// max size of a mementry
+#define MAX_ENTRY_SIZE PAGE_SIZE - sizeof(Entry)
 // pointer to SysInfo
 #define SYSINFO ((SysInfo*) (allmem + (PAGE_SIZE * my_ceil((double)(sizeof(Page) * NUM_PAGES) / (double)PAGE_SIZE)) + sizeof(Entry)))
 // pointer to pagetable
@@ -21,15 +23,13 @@
 // number of pages allocated for thread with id x
 #define GET_NUM_PTES(x) (((Entry*)(((char*) (&PAGETABLE[x][0])) - sizeof(Entry)))->size / sizeof(PTE))
 
-char *allmem;
-
 void mem_init();
-void *create_pagetable(void * end_of_mdata);
-void *create_mdata();
 void print_mem();
 int my_ceil(double num);
 void *single_page_malloc(int size, int id);
 void *multi_page_malloc(int req_pages, int size, int id);
+
+char *allmem;
 
 /* Pages */
 
@@ -65,6 +65,5 @@ typedef struct SysInfo_ {
     PTE* *pagetable;
     Page *mdata;
 } SysInfo;
-
 
 #endif
