@@ -55,4 +55,9 @@ int my_pthread_mutex_unlock(my_pthread_mutex_t *mutex);
 /* destroy the mutex */
 int my_pthread_mutex_destroy(my_pthread_mutex_t *mutex);
 
+/* Methods to be used in MMU */
+void disableAlarm();
+void setAlarm();
+int get_curr_tcb_id();
+
 #endif

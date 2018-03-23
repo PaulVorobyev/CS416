@@ -85,7 +85,7 @@ void priority_inversion_check() {
 
 /* Alarm-related functions */
 
-static void setAlarm() {
+void setAlarm() {
     if (scheduler == NULL) {
         //puts("Error: scheduler not initialized");
         exit(1);
@@ -97,8 +97,13 @@ static void setAlarm() {
     ualarm(interval, interval);
 }
 
-static void disableAlarm() {
+void disableAlarm() {
+    printf("Disable alarm\n");
     ualarm(0, 0);
+}
+
+int get_curr_tcb_id(){
+    return scheduler ? scheduler->curr->id : -1;
 }
 
 void alrm_handler(int signo) {

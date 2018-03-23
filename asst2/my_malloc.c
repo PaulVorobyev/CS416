@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "../asst1/my_pthread_t.h"
 #include "my_malloc.h"
 #include "virt_mem.h"
 
@@ -8,6 +9,9 @@
 int is_initialized = 0;
 
 void * mymalloc(size_t size, const char * file, int line, int flag) {
+    disableAlarm();
+
+    printf("%d\n", get_curr_tcb_id());
     printf("Start Malloc\n");
     if ((int)size <= 0){
         // fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line);
@@ -15,7 +19,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
     }
 
     if (!is_initialized) {
-        mem_init(allmem);
+        mem_init();
         is_initialized = 1;
     }
 
@@ -34,12 +38,13 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
     int req_pages = my_ceil((double)size_with_entry / (double)PAGE_SIZE);
 
     void *data = _malloc(req_pages, size_with_entry, id);
-
+    setAlarm();
     return data;
 }
 
 void myfree(void * ptr, const char * file, int line, int flag) {
     /*int i = 0;
+    disableAlarm();
     int current_thread = 0; // get cur function
 
     // if its a libraryreq then its sys i.e. 0
@@ -73,6 +78,7 @@ void myfree(void * ptr, const char * file, int line, int flag) {
 
     // complain because we cant find it?
 
+    setAlarm();
     return;*/
 }
 

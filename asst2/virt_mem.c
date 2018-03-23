@@ -1,9 +1,13 @@
 #include "virt_mem.h"
+#include <sys/mman.h>
 #include <stdlib.h>
 #include <stdio.h>
 
 void mem_init(){
     printf("MEM INIT\n");
+
+    posix_memalign((void**)&allmem, PAGE_SIZE, ARRAY_SIZE);
+
     void * end_of_mdata = create_mdata(allmem);
     create_pagetable(end_of_mdata);
 
@@ -15,6 +19,20 @@ void mem_init(){
         .parent = 0,
         .front = (Entry*) allmem };
 }
+
+void my_chomd(int id, int protect) {
+    // take the tcb_id and protect flag (1 for change all pages to PROT_NONE, 0 for inverse)
+    PTE *ptes = PAGETABLE[id];
+    int i = 0;
+    for (; i < GET_NUM_PTES(id); i++){
+        PTE pte = ptes[i];
+        // TODO: check if page is in mem and not swap file
+        if (1) {
+            mprotect((void*)&pte, PAGE_SIZE, protect ? PROT_NONE : PROT_READ|PROT_WRITE); 
+        }
+    }
+}
+
 
 void *create_pagetable(void * end_of_mdata){
     printf("Creating page table and SysInfo \n");

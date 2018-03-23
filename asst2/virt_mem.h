@@ -1,6 +1,9 @@
 #include <stddef.h>
 #include <unistd.h>
 
+#ifndef VIRT_MEM_H
+#define VIRT_MEM_H
+
 // Size of total memory array
 #define ARRAY_SIZE (8388608)
 // Size of Page struct
@@ -18,7 +21,7 @@
 // number of pages allocated for thread with id x
 #define GET_NUM_PTES(x) (((Entry*)(((char*) (&PAGETABLE[x][0])) - sizeof(Entry)))->size / sizeof(PTE))
 
-char allmem[ARRAY_SIZE];
+char *allmem;
 
 void mem_init();
 void *create_pagetable(void * end_of_mdata);
@@ -38,6 +41,7 @@ typedef struct Page_{
     struct Page_ * prev; //TODO: do we need?
     struct Entry_ * front;
     int idx;
+    int cur_idx;
     int parent; // for multipage requests, idx of first page
 } Page;
 
@@ -61,3 +65,5 @@ typedef struct SysInfo_ {
     Page *mdata;
 } SysInfo;
 
+
+#endif
