@@ -32,7 +32,6 @@ void my_chmod(int id, int protect) {
 }
 
 void init_front(Page *p) {
-    p->front = (Entry*) GET_PAGE_ADDRESS(p->idx);
     *p->front = (Entry) {
         .size = MAX_ENTRY_SIZE,
         .next = NULL,
@@ -47,23 +46,11 @@ int page_is_empty(Page* p) {
     return p->front->is_free && !p->front->next;
 }
 
-void init_parent_page(Page *p, int id, int idx) {
-    *p = (Page) {
-        .id = id,
-        .is_free = 0,
-        .idx = idx,
-        .parent = idx,
-        .front = p->front
-    };
-}
-
-void init_child_page(Page *p, int id, int idx, int parent) {
-    *p = (Page) {
-        .id = id,
-        .is_free = 0,
-        .idx = idx,
-        .parent = parent,
-        .front = NULL };
+void init_page(Page *p, int id, int idx, int parent) {
+    p->id = id;
+    p->is_free = 0;
+    p->idx = idx;
+    p->parent = parent;
 }
 
 int find_page(int id, int size) {
@@ -191,14 +178,14 @@ void *create_mdata(){
 
     // Populate the page metadata (in OS land) with all empty pages
     for(i = 0; i < NUM_PAGES; i++){
-        if (i > 0 && i < pages_needed) {
+        if (i < pages_needed) {
             *curr_page = (Page) {
                 .id = 0,
                 .is_free = 0,
                 .mem_free = PAGE_SIZE,
                 .next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE),
                 .prev = prev_page,
-                .front = (Entry*) (allmem + (PAGE_SIZE * i)),
+                .front = GET_PAGE_ADDRESS(i) ,
                 .idx = i,
                 .parent = 0 };
         } else if (i == pages_needed) { // new page where other sys stuff goes
@@ -208,7 +195,7 @@ void *create_mdata(){
                 .idx = i,
                 .parent = i,
                 .next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE),
-                .front = (Entry*) (allmem + (PAGE_SIZE * i)) };
+                .front = GET_PAGE_ADDRESS(i) };
         } else {
             *curr_page = (Page) {
                 .id = -1,
@@ -216,12 +203,13 @@ void *create_mdata(){
                 .mem_free = PAGE_SIZE,
                 .next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE),
                 .prev = prev_page,
-                .front = (Entry*) (allmem + (PAGE_SIZE * i)),
+                .front = GET_PAGE_ADDRESS(i),
                 .idx = -1,
                 .parent = -1 };
         }
 
         init_front(curr_page);
+        if (i == 0) curr_page->is_free = 0;
         
         prev_page = curr_page;
         curr_page = curr_page->next;
@@ -289,13 +277,6 @@ void mem_init(){
 
     void * end_of_mdata = create_mdata();
     create_pagetable(end_of_mdata);
-
-    // claim first page for sys
-    MDATA[0].id = 0;
-    MDATA[0].is_free = 0;
-    MDATA[0].idx = 0;
-    MDATA[0].parent = 0;
-    MDATA[0].front = (Entry*) allmem;
 }
 
 /* Malloc */
@@ -311,7 +292,7 @@ void *single_page_malloc(int size, int id) {
 
     Page *p = &MDATA[idx];
 
-    init_parent_page(p, id, idx);
+    init_page(p, id, idx, idx);
 
     Entry *e = find_mementry(p->front, size);
 
@@ -334,10 +315,10 @@ void *multi_page_malloc(int req_pages, int size, int id) {
         Page *cur = &MDATA[idx + i];
 
         if (i == 0) {
-            init_parent_page(cur, id, idx);
+            init_page(cur, id, idx, idx);
             cur->front->is_free = 0;
         } else {
-            init_child_page(cur, id, idx + i, idx);
+            init_page(cur, id, idx + i, idx);
         }
     }
 
