@@ -17,6 +17,23 @@
 /* Globals */
 int is_initialized = 0;
 
+void print_pagetable() {
+    printf("\n############### CURRENT PAGETABLE LAYOUT ###############\n");
+
+    int i = 0;
+    for (; i < PAGETABLE_LEN; i++) {
+        PTE* ptes = PAGETABLE[i];
+        printf("PTES for Thread #%d:\n", i);
+
+        PTE *pte = &ptes[0];
+        while (pte) {
+            printf("\tpage_index=%d, page_loc=%p\n", pte->page_index, pte->page_loc);
+
+            pte = pte->next;
+        }
+    }
+}
+
 void print_mem(){
     printf("\n############### CURRENT MEMORY LAYOUT ###############\n");
 
@@ -74,6 +91,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
         : multi_page_malloc(req_pages, size, id);
 
     print_mem();
+    print_pagetable();
 
     //setAlarm();
     return data;

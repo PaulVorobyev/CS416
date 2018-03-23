@@ -24,6 +24,8 @@
 #define GET_NUM_PTES(x) (((Entry*)(((char*) (&PAGETABLE[x][0])) - sizeof(Entry)))->size / sizeof(PTE))
 // proper address for a Page in allmem, given its idx
 #define GET_PAGE_ADDRESS(x) ((void *) (allmem + (PAGE_SIZE * x)))
+// get the length of the pagetable
+#define PAGETABLE_LEN (((Entry*)PAGETABLE - 1)->size / sizeof(PTE*))
 
 void mem_init();
 int my_ceil(double num);

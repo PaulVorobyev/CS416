@@ -268,7 +268,7 @@ void *create_pagetable(void * end_of_mdata){
         page_table_outer[0][i] = (PTE) {
             .page_index = i,
             .page_loc = GET_PAGE_ADDRESS(i),
-            .next = (i < num_sys_pages - 1) ? (PTE*) (page_table_outer[0] + i) : NULL };
+            .next = (i < num_sys_pages - 1) ? (PTE*) (&page_table_outer[0][0] + (i+1)) : NULL };
     }
 
     // remaining space entry
