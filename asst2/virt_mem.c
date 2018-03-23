@@ -211,7 +211,8 @@ void set_parent_page(Page *p, int id, int idx) {
         .id = id,
         .is_free = 0,
         .idx = idx,
-        .parent = idx
+        .parent = idx,
+        .front = p->front
     };
 }
 
@@ -266,10 +267,11 @@ void *single_page_malloc(int size, int id) {
 
     Page *p = &MDATA[idx];
 
+
     set_parent_page(p, id, idx);
 
     Entry *e = NULL;
-    if (!p->front) {
+    if (p->front == NULL) {
         init_front(p);
         e = p->front;
     } else {

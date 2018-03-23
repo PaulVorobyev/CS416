@@ -1,0 +1,438 @@
+
+START TEST BASIC MALLOC
+Start Malloc
+
+INITIALIZING THINGS!
+MEM INIT
+Creating page meta data 
+NUM PAGES FOR MDATA 24Creating page table and SysInfo 
+_malloc()
+single_page_malloc()
+
+ THE ID NUMBER IS 1 
+found an entry
+
+HERE -1
+
+TEST123
+
+something from front: 10
+############### CURRENT MEMORY LAYOUT ###############PAGE #0
+page info: id=0, is_free=0, idx=0, parent=0
+	entry info: size=4072, is_free=0
+PAGE #1
+page info: id=0, is_free=0, idx=1, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #2
+page info: id=0, is_free=0, idx=2, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #3
+page info: id=0, is_free=0, idx=3, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #4
+page info: id=0, is_free=0, idx=4, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #5
+page info: id=0, is_free=0, idx=5, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #6
+page info: id=0, is_free=0, idx=6, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #7
+page info: id=0, is_free=0, idx=7, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #8
+page info: id=0, is_free=0, idx=8, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #9
+page info: id=0, is_free=0, idx=9, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #10
+page info: id=0, is_free=0, idx=10, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #11
+page info: id=0, is_free=0, idx=11, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #12
+page info: id=0, is_free=0, idx=12, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #13
+page info: id=0, is_free=0, idx=13, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #14
+page info: id=0, is_free=0, idx=14, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #15
+page info: id=0, is_free=0, idx=15, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #16
+page info: id=0, is_free=0, idx=16, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #17
+page info: id=0, is_free=0, idx=17, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #18
+page info: id=0, is_free=0, idx=18, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #19
+page info: id=0, is_free=0, idx=19, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #20
+page info: id=0, is_free=0, idx=20, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #21
+page info: id=0, is_free=0, idx=21, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #22
+page info: id=0, is_free=0, idx=22, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #23
+page info: id=0, is_free=0, idx=23, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #24
+page info: id=0, is_free=0, idx=24, parent=24
+	entry info: size=16, is_free=0
+	entry info: size=8, is_free=0
+	entry info: size=24, is_free=0
+	entry info: size=3952, is_free=1
+PAGE #25
+page info: id=1, is_free=0, idx=25, parent=25
+	entry info: size=10, is_free=0
+	entry info: size=4038, is_free=1
+PAGE #26
+page info: id=-1, is_free=1, idx=-1, parent=-1
+	NO ENTRIES
+PAGE #27
+page info: id=-1, is_free=1, idx=-1, parent=-1
+	NO ENTRIES
+PAGE #28
+page info: id=-1, is_free=1, idx=-1, parent=-1
+	NO ENTRIES
+PAGE #29
+page info: id=-1, is_free=1, idx=-1, parent=-1
+	NO ENTRIES
+Start Malloc
+_malloc()
+single_page_malloc()
+
+ THE ID NUMBER IS 1 
+found an entry
+
+HERE 10
+
+FEST123
+
+something from front: 10
+############### CURRENT MEMORY LAYOUT ###############PAGE #0
+page info: id=0, is_free=0, idx=0, parent=0
+	entry info: size=4072, is_free=0
+PAGE #1
+page info: id=0, is_free=0, idx=1, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #2
+page info: id=0, is_free=0, idx=2, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #3
+page info: id=0, is_free=0, idx=3, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #4
+page info: id=0, is_free=0, idx=4, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #5
+page info: id=0, is_free=0, idx=5, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #6
+page info: id=0, is_free=0, idx=6, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #7
+page info: id=0, is_free=0, idx=7, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #8
+page info: id=0, is_free=0, idx=8, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #9
+page info: id=0, is_free=0, idx=9, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #10
+page info: id=0, is_free=0, idx=10, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #11
+page info: id=0, is_free=0, idx=11, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #12
+page info: id=0, is_free=0, idx=12, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #13
+page info: id=0, is_free=0, idx=13, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #14
+page info: id=0, is_free=0, idx=14, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #15
+page info: id=0, is_free=0, idx=15, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #16
+page info: id=0, is_free=0, idx=16, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #17
+page info: id=0, is_free=0, idx=17, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #18
+page info: id=0, is_free=0, idx=18, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #19
+page info: id=0, is_free=0, idx=19, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #20
+page info: id=0, is_free=0, idx=20, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #21
+page info: id=0, is_free=0, idx=21, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #22
+page info: id=0, is_free=0, idx=22, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #23
+page info: id=0, is_free=0, idx=23, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #24
+page info: id=0, is_free=0, idx=24, parent=24
+	entry info: size=16, is_free=0
+	entry info: size=8, is_free=0
+	entry info: size=24, is_free=0
+	entry info: size=3952, is_free=1
+PAGE #25
+page info: id=1, is_free=0, idx=25, parent=25
+	entry info: size=10, is_free=0
+	entry info: size=10, is_free=0
+	entry info: size=4004, is_free=1
+PAGE #26
+page info: id=-1, is_free=1, idx=-1, parent=-1
+	NO ENTRIES
+PAGE #27
+page info: id=-1, is_free=1, idx=-1, parent=-1
+	NO ENTRIES
+PAGE #28
+page info: id=-1, is_free=1, idx=-1, parent=-1
+	NO ENTRIES
+PAGE #29
+page info: id=-1, is_free=1, idx=-1, parent=-1
+	NO ENTRIES
+Start Malloc
+_malloc()
+single_page_malloc()
+
+ THE ID NUMBER IS 1 
+found an entry
+
+HERE 10
+
+FEST123
+
+something from front: 10
+############### CURRENT MEMORY LAYOUT ###############PAGE #0
+page info: id=0, is_free=0, idx=0, parent=0
+	entry info: size=4072, is_free=0
+PAGE #1
+page info: id=0, is_free=0, idx=1, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #2
+page info: id=0, is_free=0, idx=2, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #3
+page info: id=0, is_free=0, idx=3, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #4
+page info: id=0, is_free=0, idx=4, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #5
+page info: id=0, is_free=0, idx=5, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #6
+page info: id=0, is_free=0, idx=6, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #7
+page info: id=0, is_free=0, idx=7, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #8
+page info: id=0, is_free=0, idx=8, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #9
+page info: id=0, is_free=0, idx=9, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #10
+page info: id=0, is_free=0, idx=10, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #11
+page info: id=0, is_free=0, idx=11, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #12
+page info: id=0, is_free=0, idx=12, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #13
+page info: id=0, is_free=0, idx=13, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #14
+page info: id=0, is_free=0, idx=14, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #15
+page info: id=0, is_free=0, idx=15, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #16
+page info: id=0, is_free=0, idx=16, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #17
+page info: id=0, is_free=0, idx=17, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #18
+page info: id=0, is_free=0, idx=18, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #19
+page info: id=0, is_free=0, idx=19, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #20
+page info: id=0, is_free=0, idx=20, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #21
+page info: id=0, is_free=0, idx=21, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #22
+page info: id=0, is_free=0, idx=22, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #23
+page info: id=0, is_free=0, idx=23, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #24
+page info: id=0, is_free=0, idx=24, parent=24
+	entry info: size=16, is_free=0
+	entry info: size=8, is_free=0
+	entry info: size=24, is_free=0
+	entry info: size=3952, is_free=1
+PAGE #25
+page info: id=1, is_free=0, idx=25, parent=25
+	entry info: size=10, is_free=0
+	entry info: size=10, is_free=0
+	entry info: size=10, is_free=0
+	entry info: size=3970, is_free=1
+PAGE #26
+page info: id=-1, is_free=1, idx=-1, parent=-1
+	NO ENTRIES
+PAGE #27
+page info: id=-1, is_free=1, idx=-1, parent=-1
+	NO ENTRIES
+PAGE #28
+page info: id=-1, is_free=1, idx=-1, parent=-1
+	NO ENTRIES
+PAGE #29
+page info: id=-1, is_free=1, idx=-1, parent=-1
+	NO ENTRIES
+Start Malloc
+_malloc()
+single_page_malloc()
+
+ THE ID NUMBER IS 1 
+found an entry
+
+HERE 10
+
+FEST123
+
+something from front: 10
+############### CURRENT MEMORY LAYOUT ###############PAGE #0
+page info: id=0, is_free=0, idx=0, parent=0
+	entry info: size=4072, is_free=0
+PAGE #1
+page info: id=0, is_free=0, idx=1, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #2
+page info: id=0, is_free=0, idx=2, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #3
+page info: id=0, is_free=0, idx=3, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #4
+page info: id=0, is_free=0, idx=4, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #5
+page info: id=0, is_free=0, idx=5, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #6
+page info: id=0, is_free=0, idx=6, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #7
+page info: id=0, is_free=0, idx=7, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #8
+page info: id=0, is_free=0, idx=8, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #9
+page info: id=0, is_free=0, idx=9, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #10
+page info: id=0, is_free=0, idx=10, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #11
+page info: id=0, is_free=0, idx=11, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #12
+page info: id=0, is_free=0, idx=12, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #13
+page info: id=0, is_free=0, idx=13, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #14
+page info: id=0, is_free=0, idx=14, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #15
+page info: id=0, is_free=0, idx=15, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #16
+page info: id=0, is_free=0, idx=16, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #17
+page info: id=0, is_free=0, idx=17, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #18
+page info: id=0, is_free=0, idx=18, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #19
+page info: id=0, is_free=0, idx=19, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #20
+page info: id=0, is_free=0, idx=20, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #21
+page info: id=0, is_free=0, idx=21, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #22
+page info: id=0, is_free=0, idx=22, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #23
+page info: id=0, is_free=0, idx=23, parent=0
+	PART OF MULTIPAGE MALLOC
+PAGE #24
+page info: id=0, is_free=0, idx=24, parent=24
+	entry info: size=16, is_free=0
+	entry info: size=8, is_free=0
+	entry info: size=24, is_free=0
+	entry info: size=3952, is_free=1
+PAGE #25
+page info: id=1, is_free=0, idx=25, parent=25
+	entry info: size=10, is_free=0
+	entry info: size=10, is_free=0
+	entry info: size=10, is_free=0
+	entry info: size=10, is_free=0
+	entry info: size=3936, is_free=1
+PAGE #26
+page info: id=-1, is_free=1, idx=-1, parent=-1
+	NO ENTRIES
+PAGE #27
+page info: id=-1, is_free=1, idx=-1, parent=-1
+	NO ENTRIES
+PAGE #28
+page info: id=-1, is_free=1, idx=-1, parent=-1
+	NO ENTRIES
+PAGE #29
+page info: id=-1, is_free=1, idx=-1, parent=-1
+	NO ENTRIES
+END TEST BASIC MALLOC

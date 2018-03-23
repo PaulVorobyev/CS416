@@ -241,6 +241,18 @@ void test_priority_inversion(){
     puts("END TEST PRIORITY INVERSION");
 }
 
+void test_malloc_basic() {
+    puts("\nSTART TEST BASIC MALLOC");
+    
+    int i;
+    malloc(10);
+    malloc(10);
+    malloc(10);
+    malloc(10);
+
+    puts("END TEST BASIC MALLOC");
+}
+
 int main(int argc, char* argv[]) {
     /*test_m_queue();
     
@@ -250,6 +262,5 @@ int main(int argc, char* argv[]) {
     test_join();
     test_mutex();
     test_priority_inversion();*/
-    puts("hello from test!");
-    void* x = malloc(5);
+    test_malloc_basic();
 }
