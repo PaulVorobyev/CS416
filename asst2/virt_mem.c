@@ -352,17 +352,6 @@ void *multi_page_malloc(int req_pages, int size, int id) {
     return (void*) (MDATA[idx].front + 1);
 }
 
-void *_malloc(int req_pages, int size, int id){
-    printf("_malloc()\n");
-
-    void *data = (req_pages == 1) ? single_page_malloc(size, id)
-        : multi_page_malloc(req_pages, size, id);
-
-    print_mem();
-
-    return data;
-}
-
 int my_ceil(double num){
     if (num == (int)num) {
         return (int)num;

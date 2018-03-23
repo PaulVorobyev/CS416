@@ -28,7 +28,8 @@ void *create_pagetable(void * end_of_mdata);
 void *create_mdata();
 void print_mem();
 int my_ceil(double num);
-void *_malloc(int req_pages, int size, int id);
+void *single_page_malloc(int size, int id);
+void *multi_page_malloc(int req_pages, int size, int id);
 
 /* Pages */
 

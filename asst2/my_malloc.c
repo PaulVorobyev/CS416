@@ -30,15 +30,19 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
     // if thats not -1, then use it, but if it is
     // then it must be the main thread making the request
     // and its id is (will be) 1
-    int current_thread = -1; // TODO: get cur function
+    int current_thread = get_curr_tcb_id();
     int id = (flag == LIBRARYREQ) ? 0 : 
         (current_thread != -1) ? current_thread : 1; 
 
     // the total number of requested pages
     int req_pages = my_ceil((double)size_with_entry / (double)PAGE_SIZE);
 
-    void *data = _malloc(req_pages, size_with_entry, id);
-    setAlarm();
+    void *data = (req_pages == 1) ? single_page_malloc(size, id)
+        : multi_page_malloc(req_pages, size, id);
+
+    print_mem();
+
+    //setAlarm();
     return data;
 }
 
