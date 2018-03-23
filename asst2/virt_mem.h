@@ -22,9 +22,10 @@
 #define MDATA (SYSINFO->mdata)
 // number of pages allocated for thread with id x
 #define GET_NUM_PTES(x) (((Entry*)(((char*) (&PAGETABLE[x][0])) - sizeof(Entry)))->size / sizeof(PTE))
+// proper address for a Page in allmem, given its idx
+#define GET_PAGE_ADDRESS(x) ((void *) (allmem + (PAGE_SIZE * x)))
 
 void mem_init();
-void print_mem();
 int my_ceil(double num);
 void *single_page_malloc(int size, int id);
 void *multi_page_malloc(int req_pages, int size, int id);

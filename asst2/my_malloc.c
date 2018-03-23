@@ -8,6 +8,30 @@
 /* Globals */
 int is_initialized = 0;
 
+void print_mem(){
+    printf("\n############### CURRENT MEMORY LAYOUT ###############\n");
+
+    int i = 0;
+    for (; i < 30; i++) {
+        Page *p = &MDATA[i];
+
+        printf("PAGE #%d\n", i);
+        printf("page info: id=%d, is_free=%d, idx=%d, parent=%d\n", p->id, p->is_free, p->idx, p->parent);
+
+        Entry *e = p->front;
+
+        if (p->parent != -1 && p->parent != p->idx) {
+            printf("\tPART OF MULTIPAGE MALLOC\n");
+            continue;
+        }
+
+        while (e) {
+            printf("\tentry info: size=%lu, is_free=%d\n", e->size, e->is_free);
+            e = e->next;
+        }
+    }
+}
+
 void * mymalloc(size_t size, const char * file, int line, int flag) {
     disableAlarm();
     printf("Start Malloc\n");

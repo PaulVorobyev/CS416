@@ -16,30 +16,6 @@ int my_ceil(double num){
     return (int)num + 1;
 }
 
-void print_mem(){
-    printf("\n############### CURRENT MEMORY LAYOUT ###############\n");
-
-    int i = 0;
-    for (; i < 30; i++) {
-        Page *p = &MDATA[i];
-
-        printf("PAGE #%d\n", i);
-        printf("page info: id=%d, is_free=%d, idx=%d, parent=%d\n", p->id, p->is_free, p->idx, p->parent);
-
-        Entry *e = p->front;
-
-        if (p->parent != -1 && p->parent != p->idx) {
-            printf("\tPART OF MULTIPAGE MALLOC\n");
-            continue;
-        }
-
-        while (e) {
-            printf("\tentry info: size=%lu, is_free=%d\n", e->size, e->is_free);
-            e = e->next;
-        }
-    }
-}
-
 /* Page Operations */
 
 void my_chmod(int id, int protect) {
@@ -56,7 +32,7 @@ void my_chmod(int id, int protect) {
 }
 
 void init_front(Page *p) {
-    p->front = (Entry*) (allmem + (PAGE_SIZE * p->idx));
+    p->front = (Entry*) GET_PAGE_ADDRESS(p->idx);
     *p->front = (Entry) {
         .size = MAX_ENTRY_SIZE,
         .next = NULL,
@@ -280,15 +256,20 @@ void *create_pagetable(void * end_of_mdata){
     *page_table_outer = (PTE*) (((char*)(page_table_outer + 1)) + sizeof(Entry));
 
     // page_table inner
+    int mdata_size = sizeof(Page) * NUM_PAGES;
+    int num_sys_pages = my_ceil((double)mdata_size / (double)PAGE_SIZE) + 1;
     Entry *page_table_inner_entry = page_table_outer_entry->next;
     *page_table_inner_entry = (Entry) {
-        .size = sizeof(PTE),
+        .size = sizeof(PTE) * num_sys_pages,
         .is_free = 0,
-        .next = (Entry*) (((char*)(page_table_inner_entry + 1)) + sizeof(PTE)) };
-    page_table_outer[0][0] = (PTE) {
-        .page_index = 0,
-        .page_loc = (void*) allmem,
-        .next = (void*) NULL };
+        .next = (Entry*) (((char*)(page_table_inner_entry + 1)) + (sizeof(PTE) * num_sys_pages)) };
+    int i = 0;
+    for (; i < num_sys_pages; i++) {
+        page_table_outer[0][i] = (PTE) {
+            .page_index = i,
+            .page_loc = GET_PAGE_ADDRESS(i),
+            .next = (i < num_sys_pages - 1) ? (PTE*) (page_table_outer[0] + i) : NULL };
+    }
 
     // remaining space entry
     Entry *remaining_entry = page_table_inner_entry->next;
