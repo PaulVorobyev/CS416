@@ -62,7 +62,7 @@ typedef struct Entry_{
 typedef struct Page_Table_Entry_{
     // page_table[x] == all of the Page_Table_Entry's with tcb_id x
     int page_index; // virtual address
-    void * page_loc; // physical address
+    int page_loc; // physical address
     struct Page_Table_Entry_ * next; //TODO: do we need?
 } PTE;
 
@@ -81,7 +81,7 @@ void coalesce(Entry *e, Entry *prev);
 Entry *get_prev_entry(Page *p, Entry *e);
 int has_PTE(int id, int idx);
 void resize_pagetable(int len);
-void add_PTE(int id, int idx, void *location);
-void set_PTE_location(int id, int idx, void* location);
+void add_PTE(int id, int idx, int location);
+void set_PTE_location(int id, int idx, int location);
 
 #endif

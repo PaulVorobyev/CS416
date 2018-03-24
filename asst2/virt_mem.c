@@ -34,12 +34,13 @@ void load_pages(int id) {
 
     while (cur) {
         void *proper_location = GET_PAGE_ADDRESS(cur->page_index);
-        if (proper_location != cur->page_loc) {
+        void *curr_location = GET_PAGE_ADDRESS(cur->page_loc);
+        if (cur->page_index != curr_location) {
             memcpy(TEMP_PAGE, proper_location, PAGE_SIZE);
-            memcpy(proper_location, cur->page_loc, PAGE_SIZE);
-            memcpy(cur->page_loc, TEMP_PAGE, PAGE_SIZE);
+            memcpy(proper_location, curr_location, PAGE_SIZE);
+            memcpy(curr_location, TEMP_PAGE, PAGE_SIZE);
 
-            cur->page_loc = proper_location;
+            cur->page_loc = cur->page_index;
         }
 
         cur = cur->next;
@@ -50,7 +51,7 @@ int check_loaded_pages(int id) {
     PTE *cur = PAGETABLE[id];
 
     while (cur) {
-        if (GET_PAGE_ADDRESS(cur->page_index) != cur->page_loc) {
+        if (cur->page_index != cur->page_loc) {
             return 0;
         }
 
@@ -74,7 +75,7 @@ void my_chmod(int id, int protect) {
     while (cur){
         // TODO: check if page is in mem and not swap file
         if (1) {
-            mprotect(cur->page_loc, PAGE_SIZE, protect ? PROT_NONE : PROT_READ|PROT_WRITE); 
+            mprotect(GET_PAGE_ADDRESS(cur->page_loc), PAGE_SIZE, protect ? PROT_NONE : PROT_READ|PROT_WRITE); 
         }
 
         cur = cur->next;
@@ -256,7 +257,7 @@ void resize_pagetable(int len) {
     free((void*) prev_pt);
 }
 
-void add_PTE(int id, int idx, void *location) {
+void add_PTE(int id, int idx, int location) {
     // make sure thread has an array in our pagetable
     if (id >= PAGETABLE_LEN) {
         resize_pagetable(id + 1);
@@ -285,7 +286,7 @@ void add_PTE(int id, int idx, void *location) {
     }
 }
 
-void set_PTE_location(int id, int idx, void* location) {
+void set_PTE_location(int id, int idx, int location) {
     PTE *ptes = PAGETABLE[id];
     PTE *cur = &ptes[0];
 
@@ -473,7 +474,7 @@ void *create_pagetable(void * end_of_mdata){
     for (; i < num_sys_pages; i++) {
         page_table_outer[0][i] = (PTE) {
             .page_index = i,
-            .page_loc = GET_PAGE_ADDRESS(i),
+            .page_loc = i,
             .next = (i < num_sys_pages - 1) ? (PTE*) (&page_table_outer[0][0] + (i+1)) : NULL };
     }
 
@@ -530,7 +531,7 @@ void *single_page_malloc(int size, int id) {
 
     // set PTE
     if (id != 0 && !has_PTE(id, idx)) {
-        add_PTE(id, idx, GET_PAGE_ADDRESS(idx));
+        add_PTE(id, idx, idx);
     }
 
     return (void*) (e + 1);
@@ -555,7 +556,7 @@ void *multi_page_malloc(int req_pages, int size, int id) {
 
         // set PTE
         if (id != 0 && !has_PTE(id, idx)) {
-            add_PTE(id, idx, GET_PAGE_ADDRESS(idx));
+            add_PTE(id, idx, idx);
         }
     }
 
