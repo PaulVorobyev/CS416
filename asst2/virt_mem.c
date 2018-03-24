@@ -39,11 +39,13 @@ void init_front(Page *p) {
 }
 
 int is_availible_page(Page *p, int id) {
-    printf("id = %d", id);
     return (p->id == -1 || p->id == id) && (p->parent == -1 || p->parent == p->idx);
 }
 
 int page_is_empty(Page* p) {
+    printf("%d\n", p->mem_free);
+    printf("%d\n", p->front->is_free);
+    printf("%p\n", p->front->next);
     return p->front->is_free && !p->front->next;
 }
 
@@ -195,26 +197,27 @@ Entry *find_mementry_for_data(Page *p, void* data) {
 
 void *create_mdata(){
     printf("Creating page meta data \n");
-    int mdata_size = sizeof(Page) * NUM_PAGES;
-    int pages_needed = my_ceil((double)mdata_size / (double)PAGE_SIZE);
+    int pages_needed = my_ceil((double)MDATA_SIZE / (double)PAGE_SIZE);
 
-    printf("NUM PAGES FOR MDATA %d", pages_needed);
+    printf("NUM PAGES FOR MDATA %d\n", pages_needed);
 
-    // make an Entry for mdata
-    Entry *mdata_entry = (Entry*) allmem;
-    *mdata_entry = (Entry) {
-        .size = PAGE_SIZE - sizeof(Entry),
-        .next = NULL,
-        .is_free = 0 };
 
     int i;
-    Page * root = (Page*) (allmem + sizeof(Entry));
+    int mdata_start_idx = NUM_PAGES-pages_needed;
+    // Start mdata at totalnumpages-(mdata)
+
+    printf("num pages: %d          mdata size: %d\n", MDATA_NUM_PAGES, MDATA_SIZE);
+    // make an Entry for mdata
+    Entry *mdata_entry = (Entry*) (allmem + ((NUM_PAGES - pages_needed) * PAGE_SIZE));//((char*)SYSINFO + PAGE_SIZE);
+
+    Page * root = (Page*) (mdata_entry + 1);
     Page * curr_page = root;
     Page * prev_page = NULL;
-
-    // Populate the page metadata (in OS land) with all empty pages
+    
+    // Populate the page metadata (in OS land) with all,empty pages
     for(i = 0; i < NUM_PAGES; i++){
-        if (i < pages_needed) {
+        // mdata
+        if (i >= mdata_start_idx) {
             *curr_page = (Page) {
                 .id = 0,
                 .is_free = 0,
@@ -223,11 +226,12 @@ void *create_mdata(){
                 .prev = prev_page,
                 .front = GET_PAGE_ADDRESS(i) ,
                 .idx = i,
-                .parent = 0 };
-        } else if (i == pages_needed) { // new page where other sys stuff goes
+                .parent = NUM_PAGES - MDATA_NUM_PAGES };
+        } else if (i == mdata_start_idx-1) { // new page where other sys stuff goes
             *curr_page = (Page) {
                 .id = 0,
                 .is_free = 0,
+                .mem_free = PAGE_SIZE,
                 .idx = i,
                 .parent = i,
                 .next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE),
@@ -245,14 +249,18 @@ void *create_mdata(){
         }
 
         init_front(curr_page);
-        if (i == 0 || i == pages_needed) curr_page->front->is_free = 0;
+        if (i == mdata_start_idx || i == mdata_start_idx - 1) curr_page->front->is_free = 0;
         
         prev_page = curr_page;
         curr_page = curr_page->next;
     }
+    *mdata_entry = (Entry) {
+        .size = MDATA_SIZE,
+            .next = NULL,
+            .is_free = 0 };
     curr_page->next = NULL;
 
-    return (void *)(allmem + (PAGE_SIZE * pages_needed));
+    return (void *)((char *)SYSINFO - sizeof(Entry));
 }
 
 void *create_pagetable(void * end_of_mdata){
@@ -268,7 +276,7 @@ void *create_pagetable(void * end_of_mdata){
     SysInfo *info = (SysInfo*) (sys_info_entry + 1);
     *info = (SysInfo) {
         .pagetable = (PTE**) (sys_info_entry->next + 1),
-        .mdata = (Page*) (allmem + sizeof(Entry)) };
+        .mdata = (Page*) ((char *)SYSINFO + PAGE_SIZE) };
 
     // page_table outer
     Entry *page_table_outer_entry = sys_info_entry->next;
@@ -280,8 +288,7 @@ void *create_pagetable(void * end_of_mdata){
     *page_table_outer = (PTE*) (((char*)(page_table_outer + 1)) + sizeof(Entry));
 
     // page_table inner
-    int mdata_size = sizeof(Page) * NUM_PAGES;
-    int num_sys_pages = my_ceil((double)mdata_size / (double)PAGE_SIZE) + 1;
+    int num_sys_pages = my_ceil((double)MDATA_SIZE / (double)PAGE_SIZE) + 1;
     Entry *page_table_inner_entry = page_table_outer_entry->next;
     *page_table_inner_entry = (Entry) {
         .size = sizeof(PTE) * num_sys_pages,

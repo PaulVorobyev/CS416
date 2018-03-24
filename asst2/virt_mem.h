@@ -14,16 +14,20 @@
 #define NUM_PAGES ((int)(ARRAY_SIZE/PAGE_SIZE))
 // max size of a mementry
 #define MAX_ENTRY_SIZE PAGE_SIZE - sizeof(Entry)
+// SIZE OF MDATA IN PAGE NUMBERS //28-ish
+#define MDATA_NUM_PAGES (my_ceil((double)(sizeof(Page) * NUM_PAGES) / (double)PAGE_SIZE))
+// size of mdata
+#define MDATA_SIZE (MDATA_NUM_PAGES*PAGE_SIZE)
+// proper address for a Page in allmem, given its idx
+#define GET_PAGE_ADDRESS(x) ((void *) (allmem + (PAGE_SIZE * x)))
 // pointer to SysInfo
-#define SYSINFO ((SysInfo*) (allmem + (PAGE_SIZE * my_ceil((double)(sizeof(Page) * NUM_PAGES) / (double)PAGE_SIZE)) + sizeof(Entry)))
+#define SYSINFO ((SysInfo*) (allmem + ((NUM_PAGES - MDATA_NUM_PAGES - 1) * PAGE_SIZE) + sizeof(Entry)))
 // pointer to pagetable
 #define PAGETABLE (SYSINFO->pagetable)
 // pointer to mdata
 #define MDATA (SYSINFO->mdata)
 // number of pages allocated for thread with id x
 #define GET_NUM_PTES(x) (((Entry*)(((char*) (&PAGETABLE[x][0])) - sizeof(Entry)))->size / sizeof(PTE))
-// proper address for a Page in allmem, given its idx
-#define GET_PAGE_ADDRESS(x) ((void *) (allmem + (PAGE_SIZE * x)))
 // get the length of the pagetable
 #define PAGETABLE_LEN (((Entry*)PAGETABLE - 1)->size / sizeof(PTE*))
 

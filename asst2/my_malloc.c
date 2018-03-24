@@ -38,8 +38,8 @@ void print_pagetable() {
 void print_mem(){
     printf("\n############### CURRENT MEMORY LAYOUT ###############\n");
 
-    int i = 0;
-    for (; i < 33; i++) {
+    int i = NUM_PAGES - 35;
+    for (; i < NUM_PAGES; i++) {
         Page *p = &MDATA[i];
 
         printf("PAGE #%d\n", i);
