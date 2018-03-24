@@ -103,7 +103,7 @@ void disableAlarm() {
 }
 
 int get_curr_tcb_id(){
-    return scheduler ? scheduler->curr->id : -1;
+    return (scheduler && scheduler->curr) ? scheduler->curr->id : -1;
 }
 
 void alrm_handler(int signo) {

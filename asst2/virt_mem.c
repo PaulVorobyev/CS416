@@ -59,14 +59,27 @@ void init_page(Page *p, int id, int idx, int parent) {
 int find_page(int id, int size) {
     int i = 0;
 
-    for (i = 0; i < NUM_PAGES; i++) {
-        Page *cur = &MDATA[i];
+    if (id){
+        for (i = 0; i < NUM_PAGES; i++) {
+            Page *cur = &MDATA[i];
 
-        // if page belongs to someone else, we cant use it
-        if (!is_availible_page(cur, id)) continue;
+            // if page belongs to someone else, we cant use it
+            if (!is_availible_page(cur, id)) continue;
 
-        if (page_is_empty(cur) || find_mementry(cur->front, size)) {
-            return i;
+            if (page_is_empty(cur) || find_mementry(cur->front, size)) {
+                return i;
+            }
+        }
+    } else {
+        for (i = NUM_PAGES - MDATA_NUM_PAGES - 1; i >= 0; i--) {
+            Page *cur = &MDATA[i];
+
+            // if page belongs to someone else, we cant use it
+            if (!is_availible_page(cur, id)) continue;
+
+            if (page_is_empty(cur) || find_mementry(cur->front, size)) {
+                return i;
+            }
         }
     }
 
@@ -77,41 +90,81 @@ int find_pages(int id, int req_pages, int size) {
     int i = 0;
     int j = 0;
 
-    for (i = 0; i < NUM_PAGES; i++) {
-        int all_free = 1;
+    if (id){
+        for (i = 0; i < NUM_PAGES; i++) {
+            int all_free = 1;
 
-        for (j = 0; j < req_pages; j++) {
-            // cur page
-            Page *cur = &MDATA[i + j];
+            for (j = 0; j < req_pages; j++) {
+                // cur page
+                Page *cur = &MDATA[i + j];
 
-            // if page belongs to someone else, we cant use it
-            if (!is_availible_page(cur, id)) {
-                all_free = 0;
-                break;
-            }
-
-            // all req_pages, excluding last one, must be full and free
-            if (j < (req_pages - 1)) {
-                if (!page_is_empty(cur)) {
+                // if page belongs to someone else, we cant use it
+                if (!is_availible_page(cur, id)) {
                     all_free = 0;
                     break;
                 }
-            }
 
-            // last page needs size % PAGE_SIZE
-            if (j == req_pages - 1) {
-                if (!page_is_empty(cur)) {
-                    Entry *e = find_mementry(cur->front, size % PAGE_SIZE);
-                    if (!e) {
+                // all req_pages, excluding last one, must be full and free
+                if (j < (req_pages - 1)) {
+                    if (!page_is_empty(cur)) {
                         all_free = 0;
                         break;
                     }
                 }
+
+                // last page needs size % PAGE_SIZE
+                if (j == req_pages - 1) {
+                    if (!page_is_empty(cur)) {
+                        Entry *e = find_mementry(cur->front, size % PAGE_SIZE);
+                        if (!e) {
+                            all_free = 0;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (all_free) {
+                return i;
             }
         }
+    } else {
+        for (i = NUM_PAGES - MDATA_NUM_PAGES - 1; i >= 0; i--) {
+            int all_free = 1;
 
-        if (all_free) {
-            return i;
+            for (j = 0; j < req_pages; j++) {
+                // cur page
+                Page *cur = &MDATA[i + j];
+
+                // if page belongs to someone else, we cant use it
+                if (!is_availible_page(cur, id)) {
+                    all_free = 0;
+                    break;
+                }
+
+                // all req_pages, excluding last one, must be full and free
+                if (j < (req_pages - 1)) {
+                    if (!page_is_empty(cur)) {
+                        all_free = 0;
+                        break;
+                    }
+                }
+
+                // last page needs size % PAGE_SIZE
+                if (j == req_pages - 1) {
+                    if (!page_is_empty(cur)) {
+                        Entry *e = find_mementry(cur->front, size % PAGE_SIZE);
+                        if (!e) {
+                            all_free = 0;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (all_free) {
+                return i;
+            }
         }
     }
 
@@ -200,7 +253,6 @@ void *create_mdata(){
     int pages_needed = my_ceil((double)MDATA_SIZE / (double)PAGE_SIZE);
 
     printf("NUM PAGES FOR MDATA %d\n", pages_needed);
-
 
     int i;
     int mdata_start_idx = NUM_PAGES-pages_needed;

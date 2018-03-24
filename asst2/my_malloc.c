@@ -82,6 +82,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
     // then it must be the main thread making the request
     // and its id is (will be) 1
     int current_thread = get_curr_tcb_id();
+    // 0 = library, 1 = main(), # = tcb_id
     int id = (flag == LIBRARYREQ) ? 0 : 
         (current_thread != -1) ? current_thread : 1; 
 
@@ -94,7 +95,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
     print_mem();
     print_pagetable();
 
-    //setAlarm();
+    setAlarm();
     return data;
 }
 

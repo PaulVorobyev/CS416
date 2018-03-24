@@ -270,4 +270,6 @@ int main(int argc, char* argv[]) {
     test_mutex();
     test_priority_inversion();*/
     test_malloc_basic();
+	my_pthread_t t;
+    pthread_create(&t, NULL, &foo, NULL);
 }
