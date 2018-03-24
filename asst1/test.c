@@ -23,6 +23,7 @@ void *foo() {
     }
 
     int * result = (int*) malloc(sizeof(int));
+    exit(0);
     *result = 1;
     return (void*) result;
 }

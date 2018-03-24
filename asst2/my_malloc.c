@@ -99,11 +99,13 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
         : multi_page_malloc(req_pages, size, id);
 
     print_mem();
-    //print_pagetable();
+    print_pagetable();
 
     if (is_sched_init()) {
         setAlarm();
     }
+
+    printf("%d", (data) ? 777 : 66);
 
     return data;
 }

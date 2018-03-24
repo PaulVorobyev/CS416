@@ -76,5 +76,9 @@ Entry *find_mementry_for_data(Page *p, void* data);
 int is_multipage_malloc(Page *p);
 void coalesce(Entry *e, Entry *prev);
 Entry *get_prev_entry(Page *p, Entry *e);
+int has_PTE(int id, int idx);
+void resize_pagetable(int len);
+void add_PTE(int id, int idx, void *location);
+void set_PTE_location(int id, int idx, void* location);
 
 #endif

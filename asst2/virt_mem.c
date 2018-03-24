@@ -2,6 +2,8 @@
 #include <sys/mman.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include "my_malloc.h"
 
 /* Forward Declarations */
 
@@ -43,9 +45,10 @@ int is_availible_page(Page *p, int id) {
 }
 
 int page_is_empty(Page* p) {
-    printf("%d\n", p->mem_free);
-    printf("%d\n", p->front->is_free);
-    printf("%p\n", p->front->next);
+    //printf("IDX: %d\n", p->idx);
+    //printf("ID: %d\n", p->id);
+    //printf("%d\n", p->front ? 777 : 666);
+    //printf("%p\n", p->front->next);
     return p->front->is_free && !p->front->next;
 }
 
@@ -173,6 +176,78 @@ int find_pages(int id, int req_pages, int size) {
 
 int is_multipage_malloc(Page *p) {
     return (!p->front->next) && (!p->front->is_free) && (p->next) && (p->next->parent == p->idx);
+}
+
+/* Pagetable Operations */
+
+int has_PTE(int id, int idx) {
+    if (id >= PAGETABLE_LEN) return 0;
+
+    printf("IDX: %d", id);
+
+    PTE* cur = PAGETABLE[id];
+    while (cur && cur->page_index != idx) cur = cur->next;
+
+    return cur ? 1 : 0;
+}
+
+void resize_pagetable(int len) {
+    int prev_len = PAGETABLE_LEN;
+    PTE **prev_pt = PAGETABLE;
+
+    // copy old pt outer to new spot and update sysinfo
+    // i use 1 here because I dont have scope of LIBRARYREQ
+    PTE **pt = (PTE**) mymalloc(len * sizeof(PTE*), __FILE__, __LINE__, 1);
+    memcpy((void*)pt, (void*)SYSINFO->pagetable, PAGETABLE_LEN * sizeof(PTE*));
+    SYSINFO->pagetable = pt;
+
+    // init any new threads in the array to NULL
+    int i = prev_len;
+    for (; i < len; i++) PAGETABLE[i] = NULL;
+
+    free((void*) prev_pt);
+}
+
+void add_PTE(int id, int idx, void *location) {
+    // make sure thread has an array in our pagetable
+    if (id >= PAGETABLE_LEN) {
+        resize_pagetable(id + 1);
+    }
+
+    // if array is null, init it with size of 1 and add the PTE
+    if (!PAGETABLE[id]) {
+        // i use 1 here because I dont have scope of LIBRARYREQ
+        PAGETABLE[id] = (PTE*) mymalloc(sizeof(PTE), __FILE__, __LINE__, 1);
+        *PAGETABLE[id] = (PTE) {
+            .page_index = idx,
+            .page_loc = location,
+            .next = NULL };
+    } else { // add to end
+        PTE* cur = PAGETABLE[id];
+
+        // goto last entry
+        while (cur->next) cur = cur->next;
+
+        // i use 1 here because I dont have scope of LIBRARYREQ
+        cur->next = (PTE*) mymalloc(sizeof(PTE), __FILE__, __LINE__, 1);
+        *cur->next = (PTE) {
+            .page_index = idx,
+            .page_loc = location,
+            .next = NULL };
+    }
+}
+
+void set_PTE_location(int id, int idx, void* location) {
+    PTE *ptes = PAGETABLE[id];
+    PTE *cur = &ptes[0];
+
+    while (cur) {
+        if (cur->page_index == idx) {
+            cur->page_loc = location;
+        }
+
+        cur = cur->next;
+    }
 }
 
 /* Entry Operations */
@@ -394,6 +469,11 @@ void *single_page_malloc(int size, int id) {
     if (can_be_split(e, size)) split(e, size);
     e->is_free = 0;
 
+    // set PTE
+    if (id != 0 && !has_PTE(id, idx)) {
+        add_PTE(id, idx, GET_PAGE_ADDRESS(idx));
+    }
+
     return (void*) (e + 1);
 }
 
@@ -412,6 +492,11 @@ void *multi_page_malloc(int req_pages, int size, int id) {
             cur->front->size = size;
         } else {
             init_page(cur, id, idx + i, idx);
+        }
+
+        // set PTE
+        if (id != 0 && !has_PTE(id, idx)) {
+            add_PTE(id, idx, GET_PAGE_ADDRESS(idx));
         }
     }
 

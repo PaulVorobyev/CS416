@@ -105,9 +105,6 @@ void setAlarm() {
 void disableAlarm() {
     printf("Disable alarm\n");
 
-    // if we are disabling the alarm we must be in the library, right?
-    in_lib = 1;
-
     ualarm(0, 0);
 }
 
@@ -126,6 +123,9 @@ int is_in_lib() {
 
 void alrm_handler(int signo) {
     disableAlarm();
+    // if we are disabling the alarm we must be in the library, right?
+    in_lib = 1;
+
     timesSwitched += 1;
     //printf("SWITCH %d\n", timesSwitched);
 
@@ -169,6 +169,9 @@ void thread_runner(void *(*function)(void*), void *arg) {
 int my_pthread_create(my_pthread_t *id, const pthread_attr_t *attr,
 		void *(*function)(void*), void *arg) {
     disableAlarm();
+    // if we are disabling the alarm we must be in the library, right?
+    in_lib = 1;
+
 
     //puts("CREATE!"); // TODO: debug
 
@@ -212,6 +215,9 @@ int my_pthread_yield() {
 /* terminate a thread */
 void my_pthread_exit(void *value_ptr) {
     disableAlarm();
+    // if we are disabling the alarm we must be in the library, right?
+    in_lib = 1;
+
 
     //puts("ENTER EXIT!"); //TODO: debug
 
@@ -237,6 +243,9 @@ void my_pthread_exit(void *value_ptr) {
 /* wait for thread termination */
 int my_pthread_join(my_pthread_t thread, void **value_ptr) {
     disableAlarm();
+    // if we are disabling the alarm we must be in the library, right?
+    in_lib = 1;
+
 
     tcb *targetThread = (tcb*) hash_find(scheduler->terminated, thread);
 
@@ -268,6 +277,9 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
     // on is finished
     
     disableAlarm();
+    // if we are disabling the alarm we must be in the library, right?
+    in_lib = 1;
+
 
     targetThread = (tcb*) hash_find(scheduler->terminated, thread);
 
@@ -295,6 +307,9 @@ int my_pthread_mutex_init(my_pthread_mutex_t *mutex, const pthread_mutexattr_t *
 /* aquire the mutex lock */
 int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
     disableAlarm();
+    // if we are disabling the alarm we must be in the library, right?
+    in_lib = 1;
+
 
     if (!mutex->locked) {
         mutex->locked = 1;
@@ -322,6 +337,9 @@ int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
     // we have been swapped in again because the mutex is now unlocked
     
     disableAlarm();
+    // if we are disabling the alarm we must be in the library, right?
+    in_lib = 1;
+
     
     mutex->locked = 1;
     hash_insert(scheduler->lockOwners, (void*) mutex, scheduler->curr->id);
@@ -333,6 +351,9 @@ int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
 /* release the mutex lock */
 int my_pthread_mutex_unlock(my_pthread_mutex_t *mutex) {
     disableAlarm();
+    // if we are disabling the alarm we must be in the library, right?
+    in_lib = 1;
+
 
     //printf("MUTEX%d UNLOCKED!\n", mutex->id + 1);
 
@@ -359,6 +380,9 @@ int my_pthread_mutex_unlock(my_pthread_mutex_t *mutex) {
 /* destroy the mutex */
 int my_pthread_mutex_destroy(my_pthread_mutex_t *mutex) {
     disableAlarm();
+    // if we are disabling the alarm we must be in the library, right?
+    in_lib = 1;
+
     CONTINUE_CURRENT_THREAD;
 	return 0;
 };
