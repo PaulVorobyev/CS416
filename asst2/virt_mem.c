@@ -21,15 +21,21 @@ int my_ceil(double num){
 /* Page Operations */
 
 void my_chmod(int id, int protect) {
+    printf("%sing thread #%d", protect ? "protect" : "unprotect", id);
+    if (id >= PAGETABLE_LEN) {
+        printf("CHMOD: THREAD#%d NOT IN PAGETABLE YET\n", id);
+        return;
+    }
+
     // take the tcb_id and protect flag (1 for change all pages to PROT_NONE, 0 for inverse)
-    PTE *ptes = PAGETABLE[id];
-    int i = 0;
-    for (; i < GET_NUM_PTES(id); i++){
-        PTE pte = ptes[i];
+    PTE *cur = PAGETABLE[id];
+    while (cur){
         // TODO: check if page is in mem and not swap file
         if (1) {
-            mprotect((void*)&pte, PAGE_SIZE, protect ? PROT_NONE : PROT_READ|PROT_WRITE); 
+            mprotect(cur->page_loc, PAGE_SIZE, protect ? PROT_NONE : PROT_READ|PROT_WRITE); 
         }
+
+        cur = cur->next;
     }
 }
 

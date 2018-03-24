@@ -44,6 +44,8 @@ int in_lib = 0; // 1 = we r in scheduling (checked by malloc)
 
 // start alarm and swap next thread
 #define SWAP_NEXT_THREAD(old, next) {\
+    my_chmod(old->id, 1);\
+    my_chmod(next->id, 0);\
     scheduler->curr = next;\
     in_lib = 0;\
     setAlarm();\

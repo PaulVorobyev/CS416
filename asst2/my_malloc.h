@@ -12,6 +12,7 @@
 #define _GNU_SOURCE
 
 #include <stdlib.h>
+#include "virt_mem.h"
 
 // SYS malloc
 #define LIBRARYREQ 1

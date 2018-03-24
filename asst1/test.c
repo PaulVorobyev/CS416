@@ -19,7 +19,7 @@ my_pthread_mutex_t mutex2;
 void *foo() {
     int i = 0;
     for (i = 0; i < 2000; i++) {
-        printf("foo! %d\n", i);
+        //printf("foo! %d\n", i);
     }
 
     int * result = (int*) malloc(sizeof(int));
@@ -274,4 +274,5 @@ int main(int argc, char* argv[]) {
 	my_pthread_t t;
     pthread_create(&t, NULL, &foo, NULL);
     pthread_join(t, NULL);
+    malloc(9);
 }

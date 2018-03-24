@@ -3,7 +3,6 @@
 
 #include "../asst1/my_pthread_t.h"
 #include "my_malloc.h"
-#include "virt_mem.h"
 #include <stdint.h>
 
 /* Defines */
@@ -38,8 +37,8 @@ void print_pagetable() {
 void print_mem(){
     printf("\n############### CURRENT MEMORY LAYOUT ###############\n");
 
-    int i = NUM_PAGES - 50;
-    for (; i < NUM_PAGES; i++) {
+    int i = 0;
+    for (; i < 3; i++) {
         Page *p = &MDATA[i];
 
         printf("PAGE #%d\n", i);
@@ -136,6 +135,7 @@ void myfree(void * ptr, const char * file, int line, int flag) {
 
     if (is_multipage_malloc(p)) {
         Page *cur_p = p;
+        cur_p->front->size = PAGE_SIZE - sizeof(Entry);
         while (cur_p->parent == p->idx) {
             cur_p->is_free = 1;
             cur_p->parent = cur_p->idx;

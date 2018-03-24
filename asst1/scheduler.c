@@ -7,7 +7,7 @@
 /* Thread Control Block */
 
 // id to be used for next new thread
-int nextThreadNumber = 0;
+int nextThreadNumber = 1;
 
 /* initialize a tcb */
 tcb * tcb_init() {
