@@ -61,5 +61,6 @@ void disableAlarm();
 void setAlarm();
 int get_curr_tcb_id();
 int is_sched_init();
+int is_in_lib();
 
 #endif

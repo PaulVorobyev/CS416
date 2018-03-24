@@ -38,7 +38,7 @@ void print_pagetable() {
 void print_mem(){
     printf("\n############### CURRENT MEMORY LAYOUT ###############\n");
 
-    int i = NUM_PAGES - 35;
+    int i = NUM_PAGES - 50;
     for (; i < NUM_PAGES; i++) {
         Page *p = &MDATA[i];
 
@@ -86,13 +86,19 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
     int id = (flag == LIBRARYREQ) ? 0 : 
         (current_thread != -1) ? current_thread : 1; 
 
+    // quick hack for making sure malloc from pthread
+    // counts as sys
+    if (is_in_lib()) {
+        id = 0;
+    }
+
     // the total number of requested pages
     int req_pages = my_ceil((double)size_with_entry / (double)PAGE_SIZE);
 
     void *data = (req_pages == 1) ? single_page_malloc(size, id)
         : multi_page_malloc(req_pages, size, id);
 
-    //print_mem();
+    print_mem();
     //print_pagetable();
 
     if (is_sched_init()) {

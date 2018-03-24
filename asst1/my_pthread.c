@@ -38,23 +38,28 @@
 static sched * scheduler = NULL;
 int nextMutexId = 0; // id of next mutex to be created
 int timesSwitched = 0; // TODO: debug
+int in_lib = 0; // 1 = we r in scheduling (checked by malloc)
 
 /* Macros */
 
 // start alarm and swap next thread
 #define SWAP_NEXT_THREAD(old, next) {\
     scheduler->curr = next;\
+    in_lib = 0;\
     setAlarm();\
     swapcontext(&old->context, &next->context);}\
 
 // start alarm and set next thread
 #define SET_NEXT_THREAD(next) {\
     scheduler->curr = next;\
+    in_lib = 0;\
     setAlarm();\
     setcontext(&next->context);}\
 
 // set alarm and continue running current thread
-#define CONTINUE_CURRENT_THREAD setAlarm()
+#define CONTINUE_CURRENT_THREAD {\
+    in_lib = 0;\
+    setAlarm();}\
 
 /* Priority Inversion Check */
 
@@ -99,6 +104,10 @@ void setAlarm() {
 
 void disableAlarm() {
     printf("Disable alarm\n");
+
+    // if we are disabling the alarm we must be in the library, right?
+    in_lib = 1;
+
     ualarm(0, 0);
 }
 
@@ -109,6 +118,10 @@ int get_curr_tcb_id(){
 
 int is_sched_init() {
     return (scheduler != NULL && (scheduler->curr));
+}
+
+int is_in_lib() {
+    return in_lib;
 }
 
 void alrm_handler(int signo) {
