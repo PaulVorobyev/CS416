@@ -30,6 +30,9 @@
 #define GET_NUM_PTES(x) (((Entry*)(((char*) (&PAGETABLE[x][0])) - sizeof(Entry)))->size / sizeof(PTE))
 // get the length of the pagetable
 #define PAGETABLE_LEN (((Entry*)PAGETABLE - 1)->size / sizeof(PTE*))
+#define SYS_NUM_PAGES 50
+#define TEMP_PAGE (GET_PAGE_ADDRESS(NUM_PAGES - SYS_NUM_PAGES))
+#define THREAD_NUM_PAGES (NUM_PAGES - SYS_NUM_PAGES)
 
 char *allmem;
 

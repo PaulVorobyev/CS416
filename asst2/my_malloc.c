@@ -1,9 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "../asst1/my_pthread_t.h"
 #include "my_malloc.h"
 #include <stdint.h>
+#include "../asst1/my_pthread_t.h"
 
 /* Defines */
 #define ANSI_COLOR_RED     "\x1b[31m"
@@ -61,7 +61,6 @@ void print_mem(){
 
 void * mymalloc(size_t size, const char * file, int line, int flag) {
     disableAlarm();
-    printf("Start Malloc\n");
 
     if ((int)size <= 0){
         // fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line);
@@ -85,6 +84,8 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
     int id = (flag == LIBRARYREQ) ? 0 : 
         (current_thread != -1) ? current_thread : 1; 
 
+    printf("Start Malloc for thread #%d\n", id);
+
     // quick hack for making sure malloc from pthread
     // counts as sys
     if (is_in_lib()) {
@@ -103,8 +104,6 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
     if (is_sched_init()) {
         setAlarm();
     }
-
-    printf("%d", (data) ? 777 : 66);
 
     return data;
 }

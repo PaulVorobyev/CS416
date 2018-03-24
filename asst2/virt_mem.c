@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "my_malloc.h"
+#include <signal.h>
 
 /* Forward Declarations */
 
@@ -16,6 +17,47 @@ int my_ceil(double num){
         return (int)num;
     }
     return (int)num + 1;
+}
+
+/* mprotect handler */
+
+void handler(int sig, siginfo_t *si, void *unused) {
+    printf("hello from segfault handler");
+
+    if (check_loaded_pages(get_curr_tcb_id())) {
+        exit(EXIT_FAILURE);
+    }
+}
+
+void load_pages(int id) {
+    PTE *cur = PAGETABLE[id];
+
+    while (cur) {
+        void *proper_location = GET_PAGE_ADDRESS(cur->page_index);
+        if (proper_location != cur->page_loc) {
+            memcpy(TEMP_PAGE, proper_location, PAGE_SIZE);
+            memcpy(proper_location, cur->page_loc, PAGE_SIZE);
+            memcpy(cur->page_loc, TEMP_PAGE, PAGE_SIZE);
+
+            cur->page_loc = proper_location;
+        }
+
+        cur = cur->next;
+    }
+}
+
+int check_loaded_pages(int id) {
+    PTE *cur = PAGETABLE[id];
+
+    while (cur) {
+        if (GET_PAGE_ADDRESS(cur->page_index) != cur->page_loc) {
+            return 0;
+        }
+
+        cur = cur->next;
+    }
+
+    return 1;
 }
 
 /* Page Operations */
@@ -69,24 +111,24 @@ int find_page(int id, int size) {
     int i = 0;
 
     if (id){
-        for (i = 0; i < NUM_PAGES; i++) {
+        for (i = 0; i < THREAD_NUM_PAGES; i++) {
             Page *cur = &MDATA[i];
 
             // if page belongs to someone else, we cant use it
             if (!is_availible_page(cur, id)) continue;
 
-            if (page_is_empty(cur) || find_mementry(cur->front, size)) {
+            if (find_mementry(cur->front, size)) {
                 return i;
             }
         }
-    } else {
-        for (i = NUM_PAGES - MDATA_NUM_PAGES - 1; i >= 0; i--) {
+    } else { // for sys
+        for (i = NUM_PAGES - MDATA_NUM_PAGES - 1; i >= (THREAD_NUM_PAGES); i--) {
             Page *cur = &MDATA[i];
 
             // if page belongs to someone else, we cant use it
             if (!is_availible_page(cur, id)) continue;
 
-            if (page_is_empty(cur) || find_mementry(cur->front, size)) {
+            if (find_mementry(cur->front, size)) {
                 return i;
             }
         }
@@ -100,7 +142,7 @@ int find_pages(int id, int req_pages, int size) {
     int j = 0;
 
     if (id){
-        for (i = 0; i < NUM_PAGES; i++) {
+        for (i = 0; i < THREAD_NUM_PAGES; i++) {
             int all_free = 1;
 
             for (j = 0; j < req_pages; j++) {
@@ -137,8 +179,8 @@ int find_pages(int id, int req_pages, int size) {
                 return i;
             }
         }
-    } else {
-        for (i = NUM_PAGES - MDATA_NUM_PAGES - 1; i >= 0; i--) {
+    } else { // for sys
+        for (i = NUM_PAGES - MDATA_NUM_PAGES - 1; i >= (THREAD_NUM_PAGES); i--) {
             int all_free = 1;
 
             for (j = 0; j < req_pages; j++) {
@@ -453,6 +495,17 @@ void mem_init(){
 
     void * end_of_mdata = create_mdata();
     create_pagetable(end_of_mdata);
+
+    //register segfault handler
+    struct sigaction sa;
+    sa.sa_flags = SA_SIGINFO;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_sigaction = handler;
+
+    if (sigaction(SIGSEGV, &sa, NULL) == -1) {
+        printf("ERROR CANT SETUP SEGFAULT HANDLER\n");
+        exit(1);
+    }
 }
 
 /* Malloc */
