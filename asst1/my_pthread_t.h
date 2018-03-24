@@ -11,6 +11,7 @@
 
 /* include lib header files that you need here: */
 #include <sys/types.h>
+#include "scheduler.h"
 
 /* Macros */
 #define pthread_create(id, attr, fn, arg) my_pthread_create((my_pthread_t*)(id), attr, fn, arg)
@@ -59,5 +60,6 @@ int my_pthread_mutex_destroy(my_pthread_mutex_t *mutex);
 void disableAlarm();
 void setAlarm();
 int get_curr_tcb_id();
+int is_sched_init();
 
 #endif

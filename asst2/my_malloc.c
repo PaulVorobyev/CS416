@@ -92,10 +92,13 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
     void *data = (req_pages == 1) ? single_page_malloc(size, id)
         : multi_page_malloc(req_pages, size, id);
 
-    print_mem();
-    print_pagetable();
+    //print_mem();
+    //print_pagetable();
 
-    setAlarm();
+    if (is_sched_init()) {
+        setAlarm();
+    }
+
     return data;
 }
 
@@ -138,9 +141,11 @@ void myfree(void * ptr, const char * file, int line, int flag) {
         coalesce(e, prev);
     }
 
-    print_mem();
-    print_pagetable();
+    //print_mem();
+    //print_pagetable();
 
-    //setAlarm();
+    if (is_sched_init()) {
+        setAlarm();
+    }
 }
 

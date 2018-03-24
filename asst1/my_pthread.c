@@ -6,6 +6,7 @@
 // username of iLab: ooe4, jl1806, pv149
 // iLab Server: python
 
+#define SCHED
 #include "my_pthread_t.h"
 #include <unistd.h>
 #include <sys/syscall.h>
@@ -14,7 +15,6 @@
 #include <sys/ucontext.h>
 #include <stdlib.h>
 #include "data_structure.h"
-#include "scheduler.h"
 
 #include "../asst2/my_malloc.h"
 
@@ -103,7 +103,12 @@ void disableAlarm() {
 }
 
 int get_curr_tcb_id(){
+    printf("Set alarm\n");
     return (scheduler && scheduler->curr) ? scheduler->curr->id : -1;
+}
+
+int is_sched_init() {
+    return (scheduler != NULL && (scheduler->curr));
 }
 
 void alrm_handler(int signo) {

@@ -272,4 +272,5 @@ int main(int argc, char* argv[]) {
     test_malloc_basic();
 	my_pthread_t t;
     pthread_create(&t, NULL, &foo, NULL);
+    pthread_join(t, NULL);
 }
