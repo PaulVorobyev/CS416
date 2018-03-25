@@ -27,7 +27,7 @@ void set_printing_page(Page * p){
 }
 
 void clear_printing_page(){
-    printing_page = NULL;
+    printing_page = -1;
 }
 
 int my_ceil(double num){
@@ -277,6 +277,8 @@ void remove_PTE(int id){
             clear_page(cur);
         }
     }
+
+    my_chmod(id, 0);
 
     myfree((void*) PAGETABLE[id], __FILE__, __LINE__, LIBRARYREQ);
 }

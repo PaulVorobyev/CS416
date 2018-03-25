@@ -39,7 +39,7 @@ void print_mem(){
     printf("############### CURRENT MEMORY LAYOUT ###############\n");
 
     int i = 0;
-    for (; i < 3; i++) {
+    for (; i < 4; i++) {
         Page *p = &MDATA[i];
         set_printing_page(i);
 
@@ -89,7 +89,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
     int id = (flag == LIBRARYREQ) ? 0 : 
         (current_thread != -1) ? current_thread : 1; 
 
-    printf("\n -------------- Start Malloc for thread #%d --------------- \n", id);
+    printf("\n -------------- Start Malloc for thread #%d for size %d --------------- \n", id, size);
 
     // quick hack for making sure malloc from pthread
     // counts as sys
