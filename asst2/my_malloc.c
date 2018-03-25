@@ -112,7 +112,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
     int id = get_id(flag);
 
 
-    printf("\n -------------- Start Malloc for thread #%d for size %d --------------- \n", id, (int)size);
+    printf("\n -------------- Start Malloc for thread #%d for size %d at %s:%d--------------- \n", id, (int)size, file, line);
 
 
     // the total number of requested pages

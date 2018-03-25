@@ -27,7 +27,8 @@
 // alarm time for highest priority
 #define ALARM_BASE_TIME 200
 // bytes to allocate for thread stack
-#define MEM 64000
+//#define MEM 64000
+#define MEM (SIGSTKSZ - 60)
 // number of cycles to bump old jobs
 #define BUMP_CYCLES 30
 // percentage of priority levels to bump
@@ -191,6 +192,7 @@ int my_pthread_create(my_pthread_t *id, const pthread_attr_t *attr,
     // enqueue old thread
     add_job((void *) old, scheduler->m_queue);
     
+
     // create new thread
     tcb * t = tcb_init();
     getcontext(&(t->context));

@@ -261,18 +261,24 @@ void test_malloc_basic() {
 }
 
 int main(int argc, char* argv[]) {
-    /*test_m_queue();
-    
-    test_hash();
-    test_queue();
-    test_m_heap();
-    test_join();
-    test_mutex();
-    test_priority_inversion();*/
-    test_malloc_basic();
 	my_pthread_t t;
     pthread_create(&t, NULL, &foo, NULL);
     pthread_join(t, NULL);
+    test_m_queue();
+    /* test_hash(); */
+    /* test_queue(); */
+    /* test_m_heap(); */
+    /* test_join(); */
+    /* test_mutex(); */
+    /* test_priority_inversion(); */
+
+    test_malloc_basic();
+    printf("EXIT\n");
+
+    printf("BEFORE 9\n");
 
     malloc(9);
+
+    printf("AFTER 9\n");
+
 }

@@ -173,31 +173,6 @@ int find_page(int id, int size) {
         }
     }
 
-    /*
-    if (id){
-        for (i = 0; i < THREAD_NUM_PAGES; i++) {
-            Page *cur = &MDATA[i];
-
-            // if page belongs to someone else, we cant use it
-            if (!is_availible_page(cur, id)) continue;
-
-            if (find_mementry(cur->front, size)) {
-                return i;
-            }
-        }
-    } else { // for sys
-        for (i = NUM_PAGES - MDATA_NUM_PAGES - 1; i >= (THREAD_NUM_PAGES); i--) {
-            Page *cur = &MDATA[i];
-
-            // if page belongs to someone else, we cant use it
-            if (!is_availible_page(cur, id)) continue;
-
-            if (find_mementry(cur->front, size)) {
-                return i;
-            }
-        }
-    }*/
-
     return -1;
 }
 
@@ -233,60 +208,6 @@ int find_pages(int id, int req_pages, int size) {
         }
     }
 
-    /*
-    if (id){
-        for (i = 0; i < THREAD_NUM_PAGES; i++) {
-            int all_free = 1;
-
-            for (j = 0; j < req_pages; j++) {
-                // cur page
-                Page *cur = &MDATA[i + j];
-
-                // if page belongs to someone else, we cant use it
-                if (!is_availible_page(cur, id)) {
-                    all_free = 0;
-                    break;
-                }
-
-                // all req_pages must be full and free
-                if (!page_is_empty(cur)) {
-                    all_free = 0;
-                    break;
-                }
-            }
-
-            if (all_free) {
-                return i;
-            }
-        }
-    } else { // for sys
-        for (i = NUM_PAGES - MDATA_NUM_PAGES - 1; i >= (THREAD_NUM_PAGES); i--) {
-            int all_free = 1;
-
-            for (j = 0; j < req_pages; j++) {
-                // cur page
-                Page *cur = &MDATA[i + j];
-
-                // if page belongs to someone else, we cant use it
-                if (!is_availible_page(cur, id)) {
-                    all_free = 0;
-                    break;
-                }
-
-                // all req_pages, excluding last one, must be full and free
-                if (!page_is_empty(cur)) {
-                    all_free = 0;
-                    break;
-                }
-            }
-
-            if (all_free) {
-                return i;
-            }
-        }
-    }
-    */
-
     return -1;
 }
 
@@ -297,7 +218,6 @@ int is_multipage_malloc(Page *p) {
 /* Pagetable Operations */
 
 // for when a tcb terminates/finishes
-// TODO: TEST THIS
 void remove_PTE(int id){
     printf("Clearing PTE data of of THREAD #%d\n", id);
     // Clear pages in mdata
@@ -312,7 +232,6 @@ void remove_PTE(int id){
     my_chmod(id, 0);
 
     // Free PTEs
-    // TODO: WHY ISN'T IT FREEING
     PTE *curr_pte = PAGETABLE[id];
     PTE *next = NULL;
     PAGETABLE[id] = NULL;
