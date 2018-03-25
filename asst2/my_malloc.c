@@ -18,6 +18,26 @@
 /* Globals */
 int is_initialized = 0;
 
+int get_id(int flag){
+    // if its a libraryreq then its sys i.e. 0
+    // if not, then check what scheduler's curr is.
+    // if thats not -1, then use it, but if it is
+    // then it must be the main thread making the request
+    // and its id is (will be) 1
+    int current_thread = get_curr_tcb_id();
+    // 0 = library, 1 = main(), # = tcb_id
+    int id = (flag == LIBRARYREQ) ? 0 : 
+        (current_thread != -1) ? current_thread : 1; 
+    
+    // quick hack for making sure malloc from pthread
+    // counts as sys
+    if (is_in_lib()) {
+        id = 0;
+    }
+    
+    return id;
+}
+
 void print_pagetable() {
     printf("\n############### CURRENT PAGETABLE LAYOUT ###############\n");
 
@@ -35,13 +55,18 @@ void print_pagetable() {
     }
 }
 
-void print_mem(){
+void print_mem(int id){
     printf("############### CURRENT MEMORY LAYOUT ###############\n");
 
-    int i = 0;
-    for (; i < 5; i++) {
+    int i = THREAD_NUM_PAGES;
+    for (; i < NUM_PAGES; i++) {
         Page *p = &MDATA[i];
-        set_printing_page(i);
+        if (p->id != id) {
+            printf("UNPROTECTING FOR %d", p->id);
+            my_chmod(p->id, 0);
+        }
+
+        /* set_printing_page(i); */
 
         printf("PAGE #%d\n", i);
         printf("page info: id=%d, is_free=%d, idx=%d, parent=%d\n", p->id, p->is_free, p->idx, p->parent);
@@ -58,10 +83,16 @@ void print_mem(){
             printf("\tentry info: size=%lu, is_free=%d\n" ANSI_COLOR_RESET, e->size, e->is_free);
             e = e->next;
         }
+
+
+        if (p->id != id) {
+            printf("PROTECTING FOR %d", p->id);
+            my_chmod(p->id, 1);
+        }
         
-        check_if_used_handler();
+        /* check_if_used_handler(); */
     }
-    clear_printing_page();
+    /* clear_printing_page(); */
 }
 
 void * mymalloc(size_t size, const char * file, int line, int flag) {
@@ -78,24 +109,11 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
     }
 
     int size_with_entry = size + sizeof(Entry);
+    int id = get_id(flag);
 
-    // if its a libraryreq then its sys i.e. 0
-    // if not, then check what scheduler's curr is.
-    // if thats not -1, then use it, but if it is
-    // then it must be the main thread making the request
-    // and its id is (will be) 1
-    int current_thread = get_curr_tcb_id();
-    // 0 = library, 1 = main(), # = tcb_id
-    int id = (flag == LIBRARYREQ) ? 0 : 
-        (current_thread != -1) ? current_thread : 1; 
 
     printf("\n -------------- Start Malloc for thread #%d for size %d --------------- \n", id, (int)size);
 
-    // quick hack for making sure malloc from pthread
-    // counts as sys
-    if (is_in_lib()) {
-        id = 0;
-    }
 
     // the total number of requested pages
     int req_pages = my_ceil((double)size_with_entry / (double)PAGE_SIZE);
@@ -103,7 +121,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
     void *data = (req_pages == 1) ? single_page_malloc(size, id)
         : multi_page_malloc(req_pages, size, id);
 
-    print_mem();
+    print_mem(get_id(flag));
     print_pagetable();
 
     if (is_sched_init()) {
@@ -157,7 +175,7 @@ void myfree(void * ptr, const char * file, int line, int flag) {
         coalesce(e, prev);
     }
 
-    print_mem();
+    print_mem(get_id(flag));
     print_pagetable();
 
     if (is_sched_init()) {

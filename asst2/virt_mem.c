@@ -9,6 +9,7 @@
 /* Forward Declarations */
 
 Entry *find_mementry(Entry *front, int size);
+void swap_pages(int a, int b);
 int printing_page = -1;
 int handler_used = 0;
 
@@ -57,15 +58,12 @@ void handler(int sig, siginfo_t *si, void *unused) {
 }
 
 void load_pages(int id) {
+    printf("LOAD PAGES %d\n", id);
     PTE *cur = PAGETABLE[id];
 
     while (cur) {
-        void *proper_location = GET_PAGE_ADDRESS(cur->page_index);
-        void *curr_location = GET_PAGE_ADDRESS(cur->page_loc);
         if (cur->page_index != cur->page_loc) {
-            memcpy(TEMP_PAGE, proper_location, PAGE_SIZE);
-            memcpy(proper_location, curr_location, PAGE_SIZE);
-            memcpy(curr_location, TEMP_PAGE, PAGE_SIZE);
+            swap_pages(cur->page_index, cur->page_loc);
 
             cur->page_loc = cur->page_index; 
         }
@@ -75,6 +73,7 @@ void load_pages(int id) {
 }
 
 int check_loaded_pages(int id) {
+    printf("CHECK LOAD PAGES %d\n", id);
     PTE *cur = PAGETABLE[id];
 
     while (cur) {
@@ -89,6 +88,16 @@ int check_loaded_pages(int id) {
 }
 
 /* Page Operations */
+
+void swap_pages(int a, int b) {
+    printf("\nSWAP PAGES %d and %d\n", a, b);
+    void *a_loc = GET_PAGE_ADDRESS(a);
+    void *b_loc = GET_PAGE_ADDRESS(b);
+
+    memcpy(TEMP_PAGE, a_loc, PAGE_SIZE);
+    memcpy(a_loc, b_loc, PAGE_SIZE);
+    memcpy(b_loc, TEMP_PAGE, PAGE_SIZE);
+}
 
 void clear_page(Page * curr){
     curr->id = -1;
@@ -148,7 +157,23 @@ void init_page(Page *p, int id, int idx, int parent) {
 
 int find_page(int id, int size) {
     int i = 0;
+    int start = id ? 0 : THREAD_NUM_PAGES;
+    int end = id ? THREAD_NUM_PAGES : (NUM_PAGES - MDATA_NUM_PAGES);
 
+    printf("\nWTF id=%d start=%d end=%d\n", id, start, end);
+
+    for (i = start; i < end; i++) {
+        Page *cur = &MDATA[i];
+
+        // if page belongs to someone else, we cant use it
+        if (!is_availible_page(cur, id)) continue;
+
+        if (find_mementry(cur->front, size)) {
+            return i;
+        }
+    }
+
+    /*
     if (id){
         for (i = 0; i < THREAD_NUM_PAGES; i++) {
             Page *cur = &MDATA[i];
@@ -171,7 +196,7 @@ int find_page(int id, int size) {
                 return i;
             }
         }
-    }
+    }*/
 
     return -1;
 }
@@ -180,6 +205,35 @@ int find_pages(int id, int req_pages, int size) {
     int i = 0;
     int j = 0;
 
+    int start = id ? 0 : THREAD_NUM_PAGES;
+    int end = id ? THREAD_NUM_PAGES : (NUM_PAGES - MDATA_NUM_PAGES);
+        
+    for (i = start; i < end; i++) {
+        int all_free = 1;
+
+        for (j = 0; j < req_pages; j++) {
+            // cur page
+            Page *cur = &MDATA[i + j];
+
+            // if page belongs to someone else, we cant use it
+            if (!is_availible_page(cur, id)) {
+                all_free = 0;
+                break;
+            }
+
+            // all req_pages must be full and free
+            if (!page_is_empty(cur)) {
+                all_free = 0;
+                break;
+            }
+        }
+
+        if (all_free) {
+            return i;
+        }
+    }
+
+    /*
     if (id){
         for (i = 0; i < THREAD_NUM_PAGES; i++) {
             int all_free = 1;
@@ -194,23 +248,10 @@ int find_pages(int id, int req_pages, int size) {
                     break;
                 }
 
-                // all req_pages, excluding last one, must be full and free
-                if (j < (req_pages - 1)) {
-                    if (!page_is_empty(cur)) {
-                        all_free = 0;
-                        break;
-                    }
-                }
-
-                // last page needs size % PAGE_SIZE
-                if (j == req_pages - 1) {
-                    if (!page_is_empty(cur)) {
-                        Entry *e = find_mementry(cur->front, size % PAGE_SIZE);
-                        if (!e) {
-                            all_free = 0;
-                            break;
-                        }
-                    }
+                // all req_pages must be full and free
+                if (!page_is_empty(cur)) {
+                    all_free = 0;
+                    break;
                 }
             }
 
@@ -233,22 +274,9 @@ int find_pages(int id, int req_pages, int size) {
                 }
 
                 // all req_pages, excluding last one, must be full and free
-                if (j < (req_pages - 1)) {
-                    if (!page_is_empty(cur)) {
-                        all_free = 0;
-                        break;
-                    }
-                }
-
-                // last page needs size % PAGE_SIZE
-                if (j == req_pages - 1) {
-                    if (!page_is_empty(cur)) {
-                        Entry *e = find_mementry(cur->front, size % PAGE_SIZE);
-                        if (!e) {
-                            all_free = 0;
-                            break;
-                        }
-                    }
+                if (!page_is_empty(cur)) {
+                    all_free = 0;
+                    break;
                 }
             }
 
@@ -257,6 +285,7 @@ int find_pages(int id, int req_pages, int size) {
             }
         }
     }
+    */
 
     return -1;
 }
@@ -323,6 +352,7 @@ void resize_pagetable(int len) {
 }
 
 void add_PTE(int id, int idx, int location) {
+    printf("\nADD PTE %d\n", id);
     // make sure thread has an array in our pagetable
     if (id >= PAGETABLE_LEN) {
         resize_pagetable(id + 1);
@@ -577,7 +607,7 @@ void mem_init(){
 /* Malloc */
 
 void *single_page_malloc(int size, int id) {
-    printf("single_page_malloc()\n");
+    printf("single_page_malloc() for %d\n", id);
 
     int idx = find_page(id, size);
 
