@@ -38,8 +38,8 @@ void print_pagetable() {
 void print_mem(){
     printf("############### CURRENT MEMORY LAYOUT ###############\n");
 
-    int i = 0;
-    for (; i < 4; i++) {
+    int i = 2019;
+    for (; i < 2020; i++) {
         Page *p = &MDATA[i];
         set_printing_page(i);
 
@@ -118,6 +118,7 @@ void myfree(void * ptr, const char * file, int line, int flag) {
 
     intptr_t offset = (intptr_t)ptr - (intptr_t)((void*) allmem);
     int page_num = offset / PAGE_SIZE;
+    printf("~~~~~~~~~~~~ Freeing page #%d~~~~~~~~~~~~`\n", page_num);
 
     if (page_num < 0 || page_num > NUM_PAGES) {
         printf("ERROR: Invalid pointer given to free. %s:%d", file, line);
@@ -126,6 +127,7 @@ void myfree(void * ptr, const char * file, int line, int flag) {
 
     Page *p = &MDATA[page_num];
     Entry *e = find_mementry_for_data(p, ptr);
+    printf("free size: %d\n", e->size);
 
     if (!e) {
         printf("ERROR: Invalid pointer given to free. %s:%d", file, line);
@@ -138,6 +140,8 @@ void myfree(void * ptr, const char * file, int line, int flag) {
     }
 
     if (is_multipage_malloc(p)) {
+        //TODO: change parent and idx = -1
+        printf("is multi page\n");
         Page *cur_p = p;
         cur_p->front->size = PAGE_SIZE - sizeof(Entry);
         while (cur_p->parent == p->idx) {
@@ -153,8 +157,8 @@ void myfree(void * ptr, const char * file, int line, int flag) {
         coalesce(e, prev);
     }
 
-    //print_mem();
-    //print_pagetable();
+    print_mem();
+    print_pagetable();
 
     if (is_sched_init()) {
         setAlarm();

@@ -17,13 +17,13 @@ int handler_used = 0;
 // SCREW PRINTING
 void check_if_used_handler(){
     if (handler_used){
-        mprotect(printing_page, PAGE_SIZE, PROT_NONE);
+        mprotect(GET_PAGE_ADDRESS(printing_page), PAGE_SIZE, PROT_NONE);
         handler_used = 0;
     }
 }
 
-void set_printing_page(Page * p){
-    printing_page = p;
+void set_printing_page(int idx){
+    printing_page = idx;
 }
 
 void clear_printing_page(){
@@ -91,11 +91,13 @@ int check_loaded_pages(int id) {
 /* Page Operations */
 
 void clear_page(Page * curr){
-    curr->id = -1,
-    curr->is_free = 1,
-    curr->mem_free = PAGE_SIZE,
-    init_front(curr),
-    curr->idx = -1,
+    curr->id = -1;
+    curr->is_free = 1;
+    curr->mem_free = PAGE_SIZE;
+    curr->front->size = MAX_ENTRY_SIZE;
+    curr->front->next = NULL;
+    curr->front->is_free = 1 ;
+    curr->idx = -1;
     curr->parent = -1;
 }
 
@@ -280,7 +282,16 @@ void remove_PTE(int id){
 
     my_chmod(id, 0);
 
-    myfree((void*) PAGETABLE[id], __FILE__, __LINE__, LIBRARYREQ);
+    // Free PTEs
+    // TODO: WHY ISN'T IT FREEING
+    PTE *curr_pte = PAGETABLE[id];
+    PTE *next = NULL;
+    PAGETABLE[id] = NULL;
+    do{
+        next = curr_pte->next;
+        myfree((void*) curr_pte, __FILE__, __LINE__, LIBRARYREQ);
+        curr_pte = next;
+    }while(curr_pte);
 }
 
 int has_PTE(int id, int idx) {
