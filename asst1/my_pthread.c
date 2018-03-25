@@ -53,6 +53,7 @@ int in_lib = 0; // 1 = we r in scheduling (checked by malloc)
 
 // start alarm and set next thread
 #define SET_NEXT_THREAD(next) {\
+    my_chmod(next->id, 0);\
     scheduler->curr = next;\
     in_lib = 0;\
     setAlarm();\

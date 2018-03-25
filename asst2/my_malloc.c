@@ -38,8 +38,8 @@ void print_pagetable() {
 void print_mem(){
     printf("############### CURRENT MEMORY LAYOUT ###############\n");
 
-    int i = 2019;
-    for (; i < 2020; i++) {
+    int i = 0;
+    for (; i < 5; i++) {
         Page *p = &MDATA[i];
         set_printing_page(i);
 
@@ -89,7 +89,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
     int id = (flag == LIBRARYREQ) ? 0 : 
         (current_thread != -1) ? current_thread : 1; 
 
-    printf("\n -------------- Start Malloc for thread #%d for size %d --------------- \n", id, size);
+    printf("\n -------------- Start Malloc for thread #%d for size %d --------------- \n", id, (int)size);
 
     // quick hack for making sure malloc from pthread
     // counts as sys
@@ -127,7 +127,7 @@ void myfree(void * ptr, const char * file, int line, int flag) {
 
     Page *p = &MDATA[page_num];
     Entry *e = find_mementry_for_data(p, ptr);
-    printf("free size: %d\n", e->size);
+    printf("free size: %d\n", (int)e->size);
 
     if (!e) {
         printf("ERROR: Invalid pointer given to free. %s:%d", file, line);

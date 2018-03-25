@@ -75,6 +75,9 @@ typedef struct SysInfo_ {
 
 /* Tools */
 int my_ceil(double num);
+void set_printing_page(int idx);
+void clear_printing_page();
+void check_if_used_handler();
 
 /* mprotect handler */
 
