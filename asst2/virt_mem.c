@@ -1,16 +1,34 @@
-#include "virt_mem.h"
-#include <sys/mman.h>
+//#include <sys/mman.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
 #include "my_malloc.h"
-#include <signal.h>
+#include "virt_mem.h"
 
 /* Forward Declarations */
 
 Entry *find_mementry(Entry *front, int size);
+int printing_page = -1;
+int handler_used = 0;
 
 /* Misc */
+
+// SCREW PRINTING
+void check_if_used_handler(){
+    if (handler_used){
+        mprotect(printing_page, PAGE_SIZE, PROT_NONE);
+        handler_used = 0;
+    }
+}
+
+void set_printing_page(Page * p){
+    printing_page = p;
+}
+
+void clear_printing_page(){
+    printing_page = NULL;
+}
 
 int my_ceil(double num){
     if (num == (int)num) {
@@ -22,11 +40,20 @@ int my_ceil(double num){
 /* mprotect handler */
 
 void handler(int sig, siginfo_t *si, void *unused) {
-    printf("hello from segfault handler");
+    printf("hello from segfault handler\n");
+
+    // handle printing
+    if (printing_page > -1){
+        printf("printing\n");
+        mprotect(GET_PAGE_ADDRESS(printing_page), PAGE_SIZE, PROT_READ);
+        handler_used = 1;
+        return;
+    }
 
     if (check_loaded_pages(get_curr_tcb_id())) {
         exit(EXIT_FAILURE);
     }
+    exit(EXIT_FAILURE);
 }
 
 void load_pages(int id) {
@@ -35,12 +62,12 @@ void load_pages(int id) {
     while (cur) {
         void *proper_location = GET_PAGE_ADDRESS(cur->page_index);
         void *curr_location = GET_PAGE_ADDRESS(cur->page_loc);
-        if (cur->page_index != curr_location) {
+        if (cur->page_index != cur->page_loc) {
             memcpy(TEMP_PAGE, proper_location, PAGE_SIZE);
             memcpy(proper_location, curr_location, PAGE_SIZE);
             memcpy(curr_location, TEMP_PAGE, PAGE_SIZE);
 
-            cur->page_loc = cur->page_index;
+            cur->page_loc = cur->page_index; 
         }
 
         cur = cur->next;
@@ -62,6 +89,15 @@ int check_loaded_pages(int id) {
 }
 
 /* Page Operations */
+
+void clear_page(Page * curr){
+    curr->id = -1,
+    curr->is_free = 1,
+    curr->mem_free = PAGE_SIZE,
+    init_front(curr),
+    curr->idx = -1,
+    curr->parent = -1;
+}
 
 void my_chmod(int id, int protect) {
     printf("%sing thread #%d", protect ? "protect" : "unprotect", id);
@@ -228,6 +264,22 @@ int is_multipage_malloc(Page *p) {
 }
 
 /* Pagetable Operations */
+
+// for when a tcb terminates/finishes
+// TODO: TEST THIS
+void remove_PTE(int id){
+    printf("Clearing PTE data of of THREAD #%d\n", id);
+    // Clear pages in mdata
+    int i;
+    for (i = 0; i < THREAD_NUM_PAGES; i++) {
+        Page *cur = &MDATA[i];
+        if (cur->id == id){
+            clear_page(cur);
+        }
+    }
+
+    myfree((void*) PAGETABLE[id], __FILE__, __LINE__, LIBRARYREQ);
+}
 
 int has_PTE(int id, int idx) {
     if (id >= PAGETABLE_LEN) return 0;

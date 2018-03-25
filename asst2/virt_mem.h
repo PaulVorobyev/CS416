@@ -1,5 +1,7 @@
 #include <stddef.h>
 #include <unistd.h>
+#include <signal.h>
+#include <sys/mman.h>
 
 #ifndef VIRT_MEM_H
 #define VIRT_MEM_H
@@ -71,17 +73,49 @@ typedef struct SysInfo_ {
     Page *mdata;
 } SysInfo;
 
-void mem_init();
+/* Tools */
 int my_ceil(double num);
-void *single_page_malloc(int size, int id);
-void *multi_page_malloc(int req_pages, int size, int id);
-Entry *find_mementry_for_data(Page *p, void* data);
-int is_multipage_malloc(Page *p);
-void coalesce(Entry *e, Entry *prev);
-Entry *get_prev_entry(Page *p, Entry *e);
+
+/* mprotect handler */
+
+void handler(int sig, siginfo_t *si, void *unsused);
+// load all of the pages of a tcb id into memory
+void load_pages(int id);
+// check if all of an id's pages are loaded into memory
+int check_loaded_pages(int id);
+
+/* Page operations */
+
+// clear id, is_free, mem_free, idx, page_loc, parent, front
+void clear_page(Page * curr);
+// mprotect all pages with id=id with the flag=protect= 0 or 1 
+//      (PROT_NONE = 0; PROT_READ|PROT_WRITE=1)
+void my_chmod(int id, int protect);
+void init_front(Page *p);
+
+/* Page table */
+void remove_PTE(int id);
 int has_PTE(int id, int idx);
 void resize_pagetable(int len);
 void add_PTE(int id, int idx, int location);
 void set_PTE_location(int id, int idx, int location);
+
+/* Entry operations */
+Entry *get_prev_entry(Page *p, Entry *e);
+void coalesce(Entry *e, Entry *prev);
+void split(Entry *e, int size);
+Entry *find_mementry_for_data(Page *p, void* data);
+
+/* Memory init */
+void *create_mdata();
+void *create_pagetable(void * end_of_mdata);
+void mem_init();
+
+/* malloc */
+void *single_page_malloc(int size, int id);
+void *multi_page_malloc(int req_pages, int size, int id);
+
+
+int is_multipage_malloc(Page *p);
 
 #endif

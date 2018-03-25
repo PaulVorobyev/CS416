@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+//#include <sys/mman.h>
 
 #include "my_malloc.h"
 #include <stdint.h>
@@ -27,7 +28,7 @@ void print_pagetable() {
 
         PTE *pte = &ptes[0];
         while (pte) {
-            printf("\tpage_index=%d, page_loc=%p\n", pte->page_index, pte->page_loc);
+            printf("\tpage_index=%d, page_loc=%d\n", pte->page_index, pte->page_loc);
 
             pte = pte->next;
         }
@@ -35,11 +36,12 @@ void print_pagetable() {
 }
 
 void print_mem(){
-    printf("\n############### CURRENT MEMORY LAYOUT ###############\n");
+    printf("############### CURRENT MEMORY LAYOUT ###############\n");
 
     int i = 0;
     for (; i < 3; i++) {
         Page *p = &MDATA[i];
+        set_printing_page(i);
 
         printf("PAGE #%d\n", i);
         printf("page info: id=%d, is_free=%d, idx=%d, parent=%d\n", p->id, p->is_free, p->idx, p->parent);
@@ -56,7 +58,10 @@ void print_mem(){
             printf("\tentry info: size=%lu, is_free=%d\n" ANSI_COLOR_RESET, e->size, e->is_free);
             e = e->next;
         }
+        
+        check_if_used_handler();
     }
+    clear_printing_page();
 }
 
 void * mymalloc(size_t size, const char * file, int line, int flag) {
@@ -84,7 +89,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
     int id = (flag == LIBRARYREQ) ? 0 : 
         (current_thread != -1) ? current_thread : 1; 
 
-    printf("Start Malloc for thread #%d\n", id);
+    printf("\n -------------- Start Malloc for thread #%d --------------- \n", id);
 
     // quick hack for making sure malloc from pthread
     // counts as sys

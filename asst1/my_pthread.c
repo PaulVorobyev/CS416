@@ -217,6 +217,7 @@ int my_pthread_yield() {
 /* terminate a thread */
 void my_pthread_exit(void *value_ptr) {
     disableAlarm();
+    printf("ENTER EXIT()\n");
     // if we are disabling the alarm we must be in the library, right?
     in_lib = 1;
 
@@ -238,6 +239,8 @@ void my_pthread_exit(void *value_ptr) {
     if (!next) {
         exit(0);
     }
+
+    remove_PTE(get_curr_tcb_id());
 
     SET_NEXT_THREAD(next);
 };
