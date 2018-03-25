@@ -85,7 +85,7 @@ void print_mem(int id){
         }
 
 
-        if (p->id != id) {
+        if (p->id != 0 && p->id != id) {
             printf("PROTECTING FOR %d", p->id);
             my_chmod(p->id, 1);
         }
@@ -145,7 +145,7 @@ void myfree(void * ptr, const char * file, int line, int flag) {
 
     Page *p = &MDATA[page_num];
     Entry *e = find_mementry_for_data(p, ptr);
-    printf("free size: %d\n", (int)e->size);
+    //printf("free size: %d\n", (int)e->size);
 
     if (!e) {
         printf("ERROR: Invalid pointer given to free. %s:%d", file, line);

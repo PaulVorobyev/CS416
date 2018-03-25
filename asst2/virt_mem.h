@@ -32,7 +32,7 @@
 #define GET_NUM_PTES(x) (((Entry*)(((char*) (&PAGETABLE[x][0])) - sizeof(Entry)))->size / sizeof(PTE))
 // get the length of the pagetable
 #define PAGETABLE_LEN (((Entry*)PAGETABLE - 1)->size / sizeof(PTE*))
-#define SYS_NUM_PAGES 50
+#define SYS_NUM_PAGES 100
 #define TEMP_PAGE (GET_PAGE_ADDRESS(NUM_PAGES - SYS_NUM_PAGES))
 #define THREAD_NUM_PAGES (NUM_PAGES - SYS_NUM_PAGES)
 #define SYS_PAGE_START (NUM_PAGES - SYS_NUM_PAGES)
@@ -76,9 +76,6 @@ typedef struct SysInfo_ {
 
 /* Tools */
 int my_ceil(double num);
-void set_printing_page(int idx);
-void clear_printing_page();
-void check_if_used_handler();
 
 /* mprotect handler */
 

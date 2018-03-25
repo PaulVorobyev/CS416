@@ -10,26 +10,8 @@
 
 Entry *find_mementry(Entry *front, int size);
 void swap_pages(int a, int b);
-int printing_page = -1;
-int handler_used = 0;
 
 /* Misc */
-
-// SCREW PRINTING
-void check_if_used_handler(){
-    if (handler_used){
-        mprotect(GET_PAGE_ADDRESS(printing_page), PAGE_SIZE, PROT_NONE);
-        handler_used = 0;
-    }
-}
-
-void set_printing_page(int idx){
-    printing_page = idx;
-}
-
-void clear_printing_page(){
-    printing_page = -1;
-}
 
 int my_ceil(double num){
     if (num == (int)num) {
@@ -42,14 +24,6 @@ int my_ceil(double num){
 
 void handler(int sig, siginfo_t *si, void *unused) {
     printf("hello from segfault handler\n");
-
-    // handle printing
-    if (printing_page > -1){
-        printf("printing\n");
-        mprotect(GET_PAGE_ADDRESS(printing_page), PAGE_SIZE, PROT_READ);
-        handler_used = 1;
-        return;
-    }
 
     if (check_loaded_pages(get_curr_tcb_id())) {
         exit(EXIT_FAILURE);
@@ -220,6 +194,9 @@ int is_multipage_malloc(Page *p) {
 // for when a tcb terminates/finishes
 void remove_PTE(int id){
     printf("Clearing PTE data of of THREAD #%d\n", id);
+    
+    if (id >= PAGETABLE_LEN) return;
+
     // Clear pages in mdata
     int i;
     for (i = 0; i < THREAD_NUM_PAGES; i++) {
@@ -235,11 +212,12 @@ void remove_PTE(int id){
     PTE *curr_pte = PAGETABLE[id];
     PTE *next = NULL;
     PAGETABLE[id] = NULL;
-    do{
+    while(curr_pte) {
         next = curr_pte->next;
-        myfree((void*) curr_pte, __FILE__, __LINE__, LIBRARYREQ);
+
+        if (next) myfree((void*) curr_pte, __FILE__, __LINE__, LIBRARYREQ);
         curr_pte = next;
-    }while(curr_pte);
+    }
 }
 
 int has_PTE(int id, int idx) {

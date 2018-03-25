@@ -265,12 +265,12 @@ int main(int argc, char* argv[]) {
     pthread_create(&t, NULL, &foo, NULL);
     pthread_join(t, NULL);
     test_m_queue();
-    /* test_hash(); */
-    /* test_queue(); */
-    /* test_m_heap(); */
-    /* test_join(); */
-    /* test_mutex(); */
-    /* test_priority_inversion(); */
+    test_hash();
+    test_queue();
+    test_m_heap();
+    test_join();
+    test_mutex();
+    test_priority_inversion();
 
     test_malloc_basic();
     printf("EXIT\n");
