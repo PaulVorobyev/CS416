@@ -59,14 +59,13 @@ void print_pagetable() {
 void print_mem(int flag){
     printf("############### CURRENT MEMORY LAYOUT ###############\n");
 
-    int i = 0;
-    for (; i < 10; i++) {
+    int i = THREAD_NUM_PAGES;
+    for (; i < THREAD_NUM_PAGES + 50; i++) {
         int id = get_curr_tcb_id();
         // main() tcb_id = -1 in scheduler && id=1 in mmu
         id = (id != -1) ? id : 1; 
 
         Page *p = &MDATA[i];
-        //printf("WE ARE THREAD %d looking at %d's Page#%d\n", id, p->id, i);
         if (!can_access_page(p)) {
             single_chmod(i, 0);
         }
@@ -93,9 +92,7 @@ void print_mem(int flag){
             single_chmod(i, 1);
         }
         
-        /* check_if_used_handler(); */
     }
-    /* clear_printing_page(); */
 }
 
 void * mymalloc(size_t size, const char * file, int line, int flag) {
@@ -140,7 +137,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
 
 void myfree(void * ptr, const char * file, int line, int flag) {
     disableAlarm();
-    /* set_in_lib(1); */
+    set_in_lib(1);
 
     intptr_t offset = (intptr_t)ptr - (intptr_t)((void*) allmem);
     int page_num = offset / PAGE_SIZE;
@@ -191,6 +188,10 @@ void myfree(void * ptr, const char * file, int line, int flag) {
         printf("\nFREE SET ALARM\n");
         setAlarm();
     }
-    /* set_in_lib(0); */
+    set_in_lib(0);
+}
+
+void *shalloc(size_t size) {
+
 }
 

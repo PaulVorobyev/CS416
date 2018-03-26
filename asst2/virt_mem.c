@@ -225,7 +225,7 @@ int find_empty_page(int start){
 
 int find_page(int id, int size) {
     int i = 0;
-    int start = id ? 0 : THREAD_NUM_PAGES;
+    int start = id ? 0 : SYS_PAGE_START;
     int end = id ? THREAD_NUM_PAGES : (NUM_PAGES - MDATA_NUM_PAGES);
 
     //printf("\nWTF id=%d start=%d end=%d\n", id, start, end);
@@ -263,7 +263,7 @@ int find_pages(int id, int req_pages, int size) {
     int i = 0;
     int j = 0;
 
-    int start = id ? 0 : THREAD_NUM_PAGES;
+    int start = id ? 0 : SYS_PAGE_START;
     int end = id ? THREAD_NUM_PAGES : (NUM_PAGES - MDATA_NUM_PAGES);
         
     for (i = start; i < end; i++) {

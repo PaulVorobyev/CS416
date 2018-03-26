@@ -32,10 +32,12 @@
 #define GET_NUM_PTES(x) (((Entry*)(((char*) (&PAGETABLE[x][0])) - sizeof(Entry)))->size / sizeof(PTE))
 // get the length of the pagetable
 #define PAGETABLE_LEN (((Entry*)PAGETABLE - 1)->size / sizeof(PTE*))
-#define SYS_NUM_PAGES 100
+#define SYS_NUM_PAGES (NUM_PAGES / 2)
 #define TEMP_PAGE (GET_PAGE_ADDRESS(NUM_PAGES - SYS_NUM_PAGES))
 #define THREAD_NUM_PAGES (NUM_PAGES - SYS_NUM_PAGES)
-#define SYS_PAGE_START (NUM_PAGES - SYS_NUM_PAGES)
+#define SHALLOC_NUM_PAGES (4)
+#define SHALLOC_START_PAGE (THREAD_NUM_PAGES)
+#define SYS_PAGE_START ((NUM_PAGES - SYS_NUM_PAGES) + SHALLOC_NUM_PAGES)
 
 char *allmem;
 
