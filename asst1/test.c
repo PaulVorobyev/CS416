@@ -279,6 +279,10 @@ int main(int argc, char* argv[]) {
 
     malloc(9);
 
+    shalloc(100);
+    shalloc(100);
+    shalloc(5500);
+
     printf("AFTER 9\n");
 
 }

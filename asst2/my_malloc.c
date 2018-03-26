@@ -192,6 +192,41 @@ void myfree(void * ptr, const char * file, int line, int flag) {
 }
 
 void *shalloc(size_t size) {
+    disableAlarm();
+    /* set_in_lib(1); */
 
+    if ((int)size <= 0){
+        // fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line);
+        return NULL;
+    }
+
+    if (!is_initialized) {
+        mem_init();
+        is_initialized = 1;
+    }
+
+    int size_with_entry = size + sizeof(Entry);
+    int id = get_id(THREADREQ);
+
+
+    printf("\n -------------- Start Malloc for thread #%d for size %d--------------- \n", id, (int)size);
+
+
+    // the total number of requested pages
+    int req_pages = my_ceil((double)size_with_entry / (double)PAGE_SIZE);
+
+    void *data = (req_pages == 1) ? single_page_shalloc(size)
+        : multi_page_shalloc(req_pages, size);
+
+    print_mem(THREADREQ);
+    print_pagetable();
+
+    if (is_sched_init() && !is_in_lib()) {
+        printf("\nMALLOC SET ALARM\n");
+        setAlarm();
+    }
+
+    /* set_in_lib(0); */
+    return data;
 }
 

@@ -271,6 +271,10 @@ int find_pages(int id, int req_pages, int size) {
         int all_free = 1;
 
         for (j = 0; j < req_pages; j++) {
+            if ((i + j) >= end) {
+                return -1;
+            }
+
             // cur page
             Page *cur = &MDATA[i + j];
 
@@ -681,6 +685,110 @@ void *multi_page_malloc(int req_pages, int size, int id) {
         // set PTE
         if (id != 0 && !has_PTE(id, idx + i)) {
             add_PTE(id, idx + i, idx + i);
+        }
+    }
+
+    return (void*) (MDATA[idx].front + 1);
+}
+
+/* SHALLOC STUFF */
+
+int find_page_shalloc(int size) {
+    int i = SHALLOC_START_PAGE;
+
+    for (; i < SYS_PAGE_START; i++) {
+        printf("\nSINGLE SHALLOC SEARCHING PAGE#%d\n", i);
+        Page *cur = &MDATA[i];
+
+        // cant use multipage malloc'd page
+        if (is_multipage_malloc(cur)) {
+            printf("\nCANT USE PAGE %d, PART OF MULTIPAGE\n", i);
+            continue;
+        }
+
+        if (find_mementry(cur->front, size)) {
+            printf("\nFOUND A MEMENTRY AT INDEX %d\n", i);
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+int find_pages_shalloc(int req_pages, int size) {
+    int i = SHALLOC_START_PAGE;
+    int j = 0;
+        
+    for (; i < SYS_PAGE_START; i++) {
+        printf("MULTI SHALLOC SEARCHING PAGE#%d\n", i);
+        int all_free = 1;
+
+        for (j = 0; j < req_pages; j++) {
+            if ((i + j) >= SYS_PAGE_START) {
+                return -1;
+            }
+
+            // cur page
+            Page *cur = &MDATA[i + j];
+
+            // cant use multipage malloc'd page
+            if (is_multipage_malloc(cur)) {
+                printf("\nCANT USE PAGE %d, PART OF MULTIPAGE\n", i + j);
+                all_free = 0;
+                break;
+            }
+
+            // all req_pages must be full and free
+            if (!page_is_empty(cur)) {
+                all_free = 0;
+                break;
+            }
+        }
+
+        if (all_free) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+void *single_page_shalloc(int size) {
+    printf("single_page_shalloc()\n");
+
+    int idx = find_page_shalloc(size);
+
+    if (idx == -1) return NULL;
+
+    printf("found an page\n");
+
+    Page *p = &MDATA[idx];
+
+    init_page(p, -1, idx, idx);
+
+    Entry *e = find_mementry(p->front, size);
+
+    if (can_be_split(e, size)) split(e, size);
+    e->is_free = 0;
+
+    return (void*) (e + 1);
+}
+
+void *multi_page_shalloc(int req_pages, int size) {
+    int idx = find_pages_shalloc(req_pages, size);
+
+    if (idx == -1) return NULL;
+
+    int i = 0;
+    for (; i < req_pages; i++) {
+        Page *cur = &MDATA[idx + i];
+
+        if (i == 0) {
+            init_page(cur, -1, idx, idx);
+            cur->front->is_free = 0;
+            cur->front->size = size;
+        } else {
+            init_page(cur, -1, idx, idx + i);
         }
     }
 

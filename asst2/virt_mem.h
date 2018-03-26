@@ -126,4 +126,7 @@ void *multi_page_malloc(int req_pages, int size, int id);
 
 int is_multipage_malloc(Page *p);
 
+void *single_page_shalloc(int size);
+void *multi_page_shalloc(int req_pages, int size);
+
 #endif
