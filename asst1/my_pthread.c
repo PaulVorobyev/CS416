@@ -25,7 +25,7 @@
 // scale factor for time difference between priority levels
 #define ALARM_TIME_DELTA 25
 // alarm time for highest priority
-#define ALARM_BASE_TIME 200
+#define ALARM_BASE_TIME 700
 // bytes to allocate for thread stack
 //#define MEM 64000
 #define MEM (SIGSTKSZ - 60)
@@ -45,10 +45,12 @@ int in_lib = 0; // 1 = we r in scheduling (checked by malloc)
 
 // start alarm and swap next thread
 #define SWAP_NEXT_THREAD(old, next) {\
+    printf("SWAP NEXT THREAD %d with %d", old->id, next->id);\
     my_chmod(old->id, 1);\
     my_chmod(next->id, 0);\
     scheduler->curr = next;\
     in_lib = 0;\
+    printf("\nPTHREAD SET ALARM\n");\
     setAlarm();\
     swapcontext(&old->context, &next->context);}\
 
@@ -57,12 +59,14 @@ int in_lib = 0; // 1 = we r in scheduling (checked by malloc)
     my_chmod(next->id, 0);\
     scheduler->curr = next;\
     in_lib = 0;\
+    printf("\nPTHREAD SET ALARM\n");\
     setAlarm();\
     setcontext(&next->context);}\
 
 // set alarm and continue running current thread
 #define CONTINUE_CURRENT_THREAD {\
     in_lib = 0;\
+    printf("\nPTHREAD SET ALARM\n");\
     setAlarm();}\
 
 /* Priority Inversion Check */
@@ -95,6 +99,7 @@ void priority_inversion_check() {
 /* Alarm-related functions */
 
 void setAlarm() {
+    printf("\nSET ALARM\n");
     if (scheduler == NULL) {
         //puts("Error: scheduler not initialized");
         exit(1);
@@ -107,13 +112,12 @@ void setAlarm() {
 }
 
 void disableAlarm() {
-    printf("Disable alarm\n");
+    printf("\nDISABLE ALARM\n");
 
     ualarm(0, 0);
 }
 
 int get_curr_tcb_id(){
-    printf("Set alarm\n");
     return (scheduler && scheduler->curr) ? scheduler->curr->id : -1;
 }
 

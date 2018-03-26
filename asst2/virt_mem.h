@@ -62,6 +62,7 @@ typedef struct Entry_{
     int is_free;
 } Entry;
 
+// TODO: add a field for if in swap file
 typedef struct Page_Table_Entry_{
     // page_table[x] == all of the Page_Table_Entry's with tcb_id x
     int page_index; // virtual address

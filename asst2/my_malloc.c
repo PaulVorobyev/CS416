@@ -25,6 +25,7 @@ int get_id(int flag){
     // then it must be the main thread making the request
     // and its id is (will be) 1
     int current_thread = get_curr_tcb_id();
+
     // 0 = library, 1 = main(), # = tcb_id
     int id = (flag == LIBRARYREQ) ? 0 : 
         (current_thread != -1) ? current_thread : 1; 
@@ -55,13 +56,19 @@ void print_pagetable() {
     }
 }
 
-void print_mem(int id){
+void print_mem(int flag){
     printf("############### CURRENT MEMORY LAYOUT ###############\n");
 
-    int i = THREAD_NUM_PAGES;
-    for (; i < NUM_PAGES; i++) {
+    int id;
+    int i = 0;
+    for (; i < 10; i++) {
+        id = get_curr_tcb_id();
+        // main() tcb_id = -1 in scheduler && id=1 in mmu
+        id = (id != -1) ? id : 1; 
+
         Page *p = &MDATA[i];
-        if (p->id != id) {
+        printf("WE ARE THREAD %d looking at %d's Page#%d", id, p->id, i);
+        if (p->id != -1 && p->id != 0 && p->id != id) {
             printf("UNPROTECTING FOR %d", p->id);
             my_chmod(p->id, 0);
         }
@@ -85,8 +92,8 @@ void print_mem(int id){
         }
 
 
-        if (p->id != 0 && p->id != id) {
-            printf("PROTECTING FOR %d", p->id);
+        if (p->id != -1 && p->id != 0 && p->id != id) {
+            printf("\nPROTECTING FOR %d\n", p->id);
             my_chmod(p->id, 1);
         }
         
@@ -121,10 +128,11 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
     void *data = (req_pages == 1) ? single_page_malloc(size, id)
         : multi_page_malloc(req_pages, size, id);
 
-    print_mem(get_id(flag));
+    print_mem(flag);
     print_pagetable();
 
-    if (is_sched_init()) {
+    if (is_sched_init() && !is_in_lib()) {
+        printf("\nMALLOC SET ALARM\n");
         setAlarm();
     }
 
@@ -178,7 +186,8 @@ void myfree(void * ptr, const char * file, int line, int flag) {
     print_mem(get_id(flag));
     print_pagetable();
 
-    if (is_sched_init()) {
+    if (is_sched_init() && !is_in_lib()) {
+        printf("\nFREE SET ALARM\n");
         setAlarm();
     }
 }

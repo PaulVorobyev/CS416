@@ -23,12 +23,16 @@ int my_ceil(double num){
 /* mprotect handler */
 
 void handler(int sig, siginfo_t *si, void *unused) {
+    //disableAlarm();
+
     printf("hello from segfault handler\n");
 
     if (check_loaded_pages(get_curr_tcb_id())) {
         exit(EXIT_FAILURE);
     }
     exit(EXIT_FAILURE);
+
+    //setAlarm();
 }
 
 void load_pages(int id) {
@@ -115,10 +119,6 @@ int is_availible_page(Page *p, int id) {
 }
 
 int page_is_empty(Page* p) {
-    //printf("IDX: %d\n", p->idx);
-    //printf("ID: %d\n", p->id);
-    //printf("%d\n", p->front ? 777 : 666);
-    //printf("%p\n", p->front->next);
     return p->front->is_free && !p->front->next;
 }
 
@@ -134,7 +134,7 @@ int find_page(int id, int size) {
     int start = id ? 0 : THREAD_NUM_PAGES;
     int end = id ? THREAD_NUM_PAGES : (NUM_PAGES - MDATA_NUM_PAGES);
 
-    printf("\nWTF id=%d start=%d end=%d\n", id, start, end);
+    //printf("\nWTF id=%d start=%d end=%d\n", id, start, end);
 
     for (i = start; i < end; i++) {
         Page *cur = &MDATA[i];
@@ -198,13 +198,13 @@ void remove_PTE(int id){
     if (id >= PAGETABLE_LEN) return;
 
     // Clear pages in mdata
-    int i;
-    for (i = 0; i < THREAD_NUM_PAGES; i++) {
-        Page *cur = &MDATA[i];
-        if (cur->id == id){
-            clear_page(cur);
-        }
-    }
+    PTE *pte = PAGETABLE[id];
+    while (pte) {
+        printf("CLEARING PAGE %d for %d", pte->page_loc, id);
+        clear_page(&MDATA[pte->page_loc]);
+
+        pte = pte->next;
+    } 
 
     my_chmod(id, 0);
 
