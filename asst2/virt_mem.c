@@ -132,7 +132,6 @@ void swap_pages(int a, int b) {
 
         e = e->next;
     }
-    
 
     // swap fronts
     Entry *tmpE = MDATA[a].front;
@@ -192,7 +191,7 @@ void init_front(Page *p) {
 }
 
 int is_availible_page(Page *p, int id) {
-    printf("\nIS AVAILIBLE: id=%d parent=%d idx=%d\n", p->id, p->parent, p->idx);
+    printf("\nIS AVAILIBLE: id=%d parent=%d idx=%d cur_idx=%d\n", p->id, p->parent, p->idx, p->cur_idx);
     return (p->id == -1 || p->id == id) && (p->parent == -1 || p->parent == p->idx);
 }
 
@@ -211,10 +210,10 @@ void init_page(Page *p, int id, int parent, int idx) {
     p->idx = idx;
 }
 
-int find_empty_page(){
+int find_empty_page(int start){
     printf("\nlooking for empty page\n");
 
-    int i = 0;
+    int i = start;
     for(; i < THREAD_NUM_PAGES; i++){
         Page * p = &MDATA[i];
         if (page_is_empty(p) && p->id == -1){
@@ -245,7 +244,7 @@ int find_page(int id, int size) {
         if (!is_availible_page(cur, id)){
             printf("\nWE ARE GONNA MOVE PAGE %d for %d\n", i, id);
             //continue;
-            int empty = find_empty_page();
+            int empty = find_empty_page(cur->cur_idx);
             if (empty == -1) return -1;
             swap_pages (i, empty);
             single_chmod(i, 0);
@@ -284,9 +283,9 @@ int find_pages(int id, int req_pages, int size) {
 
             // if page belongs to someone else, we cant use it
             if (!is_availible_page(cur, id)) {
-                int empty = find_empty_page();
+                int empty = find_empty_page(cur->cur_idx);
                 if (empty == -1) return -1;
-                swap_pages (i, empty);
+                swap_pages (i + j, empty);
                 single_chmod(i, 0);
                 /* all_free = 0; */
                 /* break; */
