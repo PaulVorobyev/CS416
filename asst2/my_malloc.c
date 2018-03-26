@@ -59,21 +59,18 @@ void print_pagetable() {
 void print_mem(int flag){
     printf("############### CURRENT MEMORY LAYOUT ###############\n");
 
-    int id;
     int i = 0;
     for (; i < 10; i++) {
-        id = get_curr_tcb_id();
+        int id = get_curr_tcb_id();
         // main() tcb_id = -1 in scheduler && id=1 in mmu
         id = (id != -1) ? id : 1; 
 
         Page *p = &MDATA[i];
         printf("WE ARE THREAD %d looking at %d's Page#%d", id, p->id, i);
-        if (p->id != -1 && p->id != 0 && p->id != id) {
+        if (!can_access_page(p)) {
             printf("UNPROTECTING FOR %d", p->id);
-            my_chmod(p->id, 0);
+            single_chmod(i, 0);
         }
-
-        /* set_printing_page(i); */
 
         printf("PAGE #%d\n", i);
         printf("page info: id=%d, is_free=%d, idx=%d, parent=%d\n", p->id, p->is_free, p->idx, p->parent);
@@ -92,9 +89,9 @@ void print_mem(int flag){
         }
 
 
-        if (p->id != -1 && p->id != 0 && p->id != id) {
+        if (!can_access_page(p)) {
             printf("\nPROTECTING FOR %d\n", p->id);
-            my_chmod(p->id, 1);
+            single_chmod(i, 1);
         }
         
         /* check_if_used_handler(); */
@@ -104,6 +101,7 @@ void print_mem(int flag){
 
 void * mymalloc(size_t size, const char * file, int line, int flag) {
     disableAlarm();
+    /* set_in_lib(1); */
 
     if ((int)size <= 0){
         // fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line);
@@ -136,11 +134,14 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
         setAlarm();
     }
 
+    /* printf("\nEND MALLOC\n"); */
+    /* set_in_lib(0); */
     return data;
 }
 
 void myfree(void * ptr, const char * file, int line, int flag) {
     disableAlarm();
+    /* set_in_lib(1); */
 
     intptr_t offset = (intptr_t)ptr - (intptr_t)((void*) allmem);
     int page_num = offset / PAGE_SIZE;
@@ -186,9 +187,11 @@ void myfree(void * ptr, const char * file, int line, int flag) {
     print_mem(get_id(flag));
     print_pagetable();
 
+    /* printf("\nEND FREE\n"); */
     if (is_sched_init() && !is_in_lib()) {
         printf("\nFREE SET ALARM\n");
         setAlarm();
     }
+    /* set_in_lib(0); */
 }
 

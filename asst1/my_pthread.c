@@ -46,9 +46,10 @@ int in_lib = 0; // 1 = we r in scheduling (checked by malloc)
 // start alarm and swap next thread
 #define SWAP_NEXT_THREAD(old, next) {\
     printf("SWAP NEXT THREAD %d with %d", old->id, next->id);\
+    scheduler->curr = next;\
     my_chmod(old->id, 1);\
     my_chmod(next->id, 0);\
-    scheduler->curr = next;\
+    load_pages(next->id);\
     in_lib = 0;\
     printf("\nPTHREAD SET ALARM\n");\
     setAlarm();\
@@ -56,8 +57,9 @@ int in_lib = 0; // 1 = we r in scheduling (checked by malloc)
 
 // start alarm and set next thread
 #define SET_NEXT_THREAD(next) {\
-    my_chmod(next->id, 0);\
     scheduler->curr = next;\
+    my_chmod(next->id, 0);\
+    load_pages(next->id);\
     in_lib = 0;\
     printf("\nPTHREAD SET ALARM\n");\
     setAlarm();\
@@ -129,8 +131,19 @@ int is_in_lib() {
     return in_lib;
 }
 
+void set_in_lib(int x) {
+    in_lib = x;
+}
+
 void alrm_handler(int signo) {
     disableAlarm();
+    
+    if (in_lib) {
+        printf("WERE IN LIB, JUST IGNORE TIMER");
+        return;
+    }
+
+    printf("\nTIMER WENT OFF!\n");
     // if we are disabling the alarm we must be in the library, right?
     in_lib = 1;
 
@@ -246,8 +259,6 @@ void my_pthread_exit(void *value_ptr) {
     if (!next) {
         exit(0);
     }
-
-    remove_PTE(get_curr_tcb_id());
 
     SET_NEXT_THREAD(next);
 };

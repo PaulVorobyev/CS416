@@ -202,8 +202,8 @@ void test_join(){
     pthread_join(b, &b_ret);
     pthread_join(b2, &b2_ret);
 
-    printf("Threads returned: %d, %d, %d\n", (*(int*)f_ret),
-        (*(int*)b_ret), (*(int*)b2_ret));
+    /* printf("Threads returned: %d, %d, %d\n", (*(int*)f_ret), */
+    /*     (*(int*)b_ret), (*(int*)b2_ret)); */
 
     puts("END TEST JOIN");
 }

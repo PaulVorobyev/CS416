@@ -15,7 +15,7 @@
 // total number of pages in memory
 #define NUM_PAGES ((int)(ARRAY_SIZE/PAGE_SIZE))
 // max size of a mementry
-#define MAX_ENTRY_SIZE PAGE_SIZE - sizeof(Entry)
+#define MAX_ENTRY_SIZE (PAGE_SIZE - sizeof(Entry))
 // SIZE OF MDATA IN PAGE NUMBERS //28-ish
 #define MDATA_NUM_PAGES (my_ceil((double)(sizeof(Page) * NUM_PAGES) / (double)PAGE_SIZE))
 // size of mdata
@@ -50,6 +50,7 @@ typedef struct Page_{
     struct Page_ * prev; //TODO: do we need?
     struct Entry_ * front;
     int idx;
+    // TODO: unused
     int cur_idx;
     int parent; // for multipage requests, idx of first page
 } Page;
@@ -93,7 +94,9 @@ void clear_page(Page * curr);
 // mprotect all pages with id=id with the flag=protect= 0 or 1 
 //      (PROT_NONE = 0; PROT_READ|PROT_WRITE=1)
 void my_chmod(int id, int protect);
+void single_chmod(int idx, int protect);
 void init_front(Page *p);
+int find_empty_page();
 
 /* Page table */
 void remove_PTE(int id);
@@ -101,6 +104,7 @@ int has_PTE(int id, int idx);
 void resize_pagetable(int len);
 void add_PTE(int id, int idx, int location);
 void set_PTE_location(int id, int idx, int location);
+int can_access_page(Page * p);
 
 /* Entry operations */
 Entry *get_prev_entry(Page *p, Entry *e);

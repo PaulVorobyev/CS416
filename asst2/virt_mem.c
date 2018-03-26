@@ -23,29 +23,46 @@ int my_ceil(double num){
 /* mprotect handler */
 
 void handler(int sig, siginfo_t *si, void *unused) {
-    //disableAlarm();
+    disableAlarm();
 
-    printf("hello from segfault handler\n");
+    intptr_t offset = (intptr_t)si->si_addr - (intptr_t)((void*) allmem);
+    int page_num = offset / PAGE_SIZE;
+    printf("\nERROR TRYING TO ACCESS PAGE #%d as thread %d\n", page_num, get_curr_tcb_id());
+    exit(1);
 
-    if (check_loaded_pages(get_curr_tcb_id())) {
-        exit(EXIT_FAILURE);
-    }
-    exit(EXIT_FAILURE);
+    /* if (check_loaded_pages(get_curr_tcb_id())) { */
+    /*     exit(EXIT_FAILURE); */
+    /* } else { */
+    /*     load_pages(get_curr_tcb_id()); */
+    /* } */
+    
 
-    //setAlarm();
+    /* setAlarm(); */
 }
 
 void load_pages(int id) {
     printf("LOAD PAGES %d\n", id);
+    if(id >= PAGETABLE_LEN){
+        return;
+    }
     PTE *cur = PAGETABLE[id];
-
     while (cur) {
         if (cur->page_index != cur->page_loc) {
-            swap_pages(cur->page_index, cur->page_loc);
+            printf("PAGE #%d NOT IN PROPER SPOT FOR THREAD #%d", cur->page_index, id);
+            PTE *target = PAGETABLE[MDATA[cur->page_index].id];
+            while (target){
+                if (target->page_loc == cur->page_index){
+                    target->page_loc = cur->page_loc;
+                    break;
+                }
+                target = target->next;
+            }
 
-            cur->page_loc = cur->page_index; 
+            swap_pages(cur->page_index, cur->page_loc);
+            cur->page_loc = cur->page_index;
         }
 
+        single_chmod(cur->page_index, 0);
         cur = cur->next;
     }
 }
@@ -67,17 +84,34 @@ int check_loaded_pages(int id) {
 
 /* Page Operations */
 
+int can_access_page(Page * p){
+    return (p->id == -1 || p->id == 0 || p->id == get_curr_tcb_id());
+    //return !(p->id != -1 && p->id != 0 && p->id != get_curr_tcb_id()); 
+}
+
 void swap_pages(int a, int b) {
     printf("\nSWAP PAGES %d and %d\n", a, b);
     void *a_loc = GET_PAGE_ADDRESS(a);
     void *b_loc = GET_PAGE_ADDRESS(b);
 
+    if (!can_access_page(&MDATA[a])) single_chmod(a,0);
+    if (!can_access_page(&MDATA[b])) single_chmod(b,0);
+
     memcpy(TEMP_PAGE, a_loc, PAGE_SIZE);
     memcpy(a_loc, b_loc, PAGE_SIZE);
     memcpy(b_loc, TEMP_PAGE, PAGE_SIZE);
+    
+    // swap mdata
+    Page tmp = MDATA[a];
+    MDATA[a] = MDATA[b];
+    MDATA[b] = tmp;
+
+    if (!can_access_page(&MDATA[a])) single_chmod(a,1);
+    if (!can_access_page(&MDATA[b])) single_chmod(b,1);
 }
 
 void clear_page(Page * curr){
+    printf("\nI AM CLEAR_PAGE\n");
     curr->id = -1;
     curr->is_free = 1;
     curr->mem_free = PAGE_SIZE;
@@ -89,7 +123,6 @@ void clear_page(Page * curr){
 }
 
 void my_chmod(int id, int protect) {
-    printf("%sing thread #%d", protect ? "protect" : "unprotect", id);
     if (id >= PAGETABLE_LEN) {
         printf("CHMOD: THREAD#%d NOT IN PAGETABLE YET\n", id);
         return;
@@ -105,6 +138,11 @@ void my_chmod(int id, int protect) {
 
         cur = cur->next;
     }
+}
+
+void single_chmod(int idx, int protect) {
+            printf("%sing thread #%d with page index %d", protect ? "protect" : "unprotect", get_curr_tcb_id(), idx);
+    mprotect(GET_PAGE_ADDRESS(idx), PAGE_SIZE, protect ? PROT_NONE : PROT_READ|PROT_WRITE); 
 }
 
 void init_front(Page *p) {
@@ -129,6 +167,17 @@ void init_page(Page *p, int id, int idx, int parent) {
     p->parent = parent;
 }
 
+int find_empty_page(){
+    int i = 0;
+    for(; i < THREAD_NUM_PAGES; i++){
+        Page * p = &MDATA[i];
+        if (page_is_empty(p) && p->id == -1){
+            return i;
+        }
+    }
+    return -1;
+}
+
 int find_page(int id, int size) {
     int i = 0;
     int start = id ? 0 : THREAD_NUM_PAGES;
@@ -137,10 +186,16 @@ int find_page(int id, int size) {
     //printf("\nWTF id=%d start=%d end=%d\n", id, start, end);
 
     for (i = start; i < end; i++) {
+        printf("SINGLE MALLOC SEARCHING PAGE#%d FOR THREAD#%d", i, id);
         Page *cur = &MDATA[i];
 
-        // if page belongs to someone else, we cant use it
-        if (!is_availible_page(cur, id)) continue;
+        // if page belongs to someone else, we cant use it, so swap it out
+        if (!is_availible_page(cur, id)){
+            continue;
+            int empty = find_empty_page();
+            if (empty == -1) return -1;
+            swap_pages (i, empty);
+        }
 
         if (find_mementry(cur->front, size)) {
             return i;
@@ -158,6 +213,7 @@ int find_pages(int id, int req_pages, int size) {
     int end = id ? THREAD_NUM_PAGES : (NUM_PAGES - MDATA_NUM_PAGES);
         
     for (i = start; i < end; i++) {
+        printf("MULTI MALLOC SEARCHING PAGE#%d FOR THREAD#%d", i, id);
         int all_free = 1;
 
         for (j = 0; j < req_pages; j++) {
@@ -374,7 +430,7 @@ void *create_mdata(){
     int mdata_start_idx = NUM_PAGES-pages_needed;
     // Start mdata at totalnumpages-(mdata)
 
-    printf("num pages: %d          mdata size: %d\n", MDATA_NUM_PAGES, MDATA_SIZE);
+    printf("num pages: %d          mdata size: %lu\n", MDATA_NUM_PAGES, MDATA_SIZE);
     // make an Entry for mdata
     Entry *mdata_entry = (Entry*) (allmem + ((NUM_PAGES - pages_needed) * PAGE_SIZE));//((char*)SYSINFO + PAGE_SIZE);
 
@@ -386,39 +442,41 @@ void *create_mdata(){
     for(i = 0; i < NUM_PAGES; i++){
         // mdata
         if (i >= mdata_start_idx) {
-            *curr_page = (Page) {
-                .id = 0,
-                .is_free = 0,
-                .mem_free = PAGE_SIZE,
-                .next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE),
-                .prev = prev_page,
-                .front = GET_PAGE_ADDRESS(i) ,
-                .idx = i,
-                .parent = NUM_PAGES - MDATA_NUM_PAGES };
+            curr_page->id = 0;
+            curr_page->is_free = 0;
+            curr_page->mem_free = PAGE_SIZE;
+            curr_page->next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE);
+            curr_page->prev = prev_page;
+            curr_page->front = GET_PAGE_ADDRESS(i);
+            curr_page->idx = i;
+            curr_page->parent = NUM_PAGES - MDATA_NUM_PAGES;
         } else if (i == mdata_start_idx-1) { // new page where other sys stuff goes
-            *curr_page = (Page) {
-                .id = 0,
-                .is_free = 0,
-                .mem_free = PAGE_SIZE,
-                .idx = i,
-                .parent = i,
-                .next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE),
-                .front = GET_PAGE_ADDRESS(i) };
+            curr_page->id = 0;
+            curr_page->is_free = 0;
+            curr_page->mem_free = PAGE_SIZE;
+            curr_page->next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE);
+            curr_page->prev = prev_page;
+            curr_page->front = GET_PAGE_ADDRESS(i);
+            curr_page->idx = i;
+            curr_page->parent = i;
         } else {
-            *curr_page = (Page) {
-                .id = -1,
-                .is_free = 1,
-                .mem_free = PAGE_SIZE,
-                .next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE),
-                .prev = prev_page,
-                .front = GET_PAGE_ADDRESS(i),
-                .idx = -1,
-                .parent = -1 };
+            curr_page->id = -1;
+            curr_page->is_free = 1;
+            curr_page->mem_free = PAGE_SIZE;
+            curr_page->next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE);
+            curr_page->prev = prev_page;
+            curr_page->front = GET_PAGE_ADDRESS(i);
+            curr_page->idx = -1;
+            curr_page->parent = -1;
         }
 
-        init_front(curr_page);
-        if (i == mdata_start_idx || i == mdata_start_idx - 1) curr_page->front->is_free = 0;
-        
+        if (i <= mdata_start_idx) {
+            init_front(curr_page);
+            if (i == mdata_start_idx || i == (mdata_start_idx - 1)) {
+                curr_page->front->is_free = 0;
+            }
+        }
+
         prev_page = curr_page;
         curr_page = curr_page->next;
     }
