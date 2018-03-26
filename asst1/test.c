@@ -255,7 +255,7 @@ void test_malloc_basic() {
     free(d);
 
     void *e = malloc(5500);
-    free(e);
+    //free(e);
 
     puts("END TEST BASIC MALLOC");
 }

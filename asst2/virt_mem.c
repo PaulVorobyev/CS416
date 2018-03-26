@@ -114,15 +114,35 @@ void swap_pages(int a, int b) {
     MDATA[a] = MDATA[b];
     MDATA[b] = tmp;
 
+    // swap cur_idx
+    int tmpCurIdx = MDATA[a].cur_idx;
+    MDATA[a].cur_idx = MDATA[b].cur_idx;
+    MDATA[b].cur_idx = tmpCurIdx;
+
+    // fix entry next's
+    Entry *e = MDATA[a].front;
+    while (e->next) {
+        e->next = (Entry*) ((char*)e + (e->size + sizeof(Entry)));
+
+        e = e->next;
+    }
+    e = MDATA[b].front;
+    while (e->next) {
+        e->next = (Entry*) ((char*)e + (e->size + sizeof(Entry)));
+
+        e = e->next;
+    }
+    
+
     // swap fronts
     Entry *tmpE = MDATA[a].front;
     MDATA[a].front = MDATA[b].front;
     MDATA[b].front = tmpE;
 
     // swap idx's
-    int tmpIdx = MDATA[a].idx;
-    MDATA[a].idx = MDATA[b].idx;
-    MDATA[b].idx = tmpIdx;
+    /* int tmpIdx = MDATA[a].idx; */
+    /* MDATA[a].idx = MDATA[b].idx; */
+    /* MDATA[b].idx = tmpIdx; */
 
     if (!can_access_page(&MDATA[a])) single_chmod(a,1);
     if (!can_access_page(&MDATA[b])) single_chmod(b,1);
@@ -136,8 +156,8 @@ void clear_page(Page * curr){
     curr->front->size = MAX_ENTRY_SIZE;
     curr->front->next = NULL;
     curr->front->is_free = 1 ;
-    curr->idx = -1;
-    curr->parent = -1;
+    curr->idx = curr->idx;
+    curr->parent = curr->idx;
 }
 
 void my_chmod(int id, int protect) {
@@ -151,7 +171,7 @@ void my_chmod(int id, int protect) {
     while (cur){
         // TODO: check if page is in mem and not swap file
         if (1) {
-            mprotect(GET_PAGE_ADDRESS(cur->page_loc), PAGE_SIZE, protect ? PROT_NONE : PROT_READ|PROT_WRITE); 
+            single_chmod(cur->page_loc, protect);
         }
 
         cur = cur->next;
@@ -159,7 +179,8 @@ void my_chmod(int id, int protect) {
 }
 
 void single_chmod(int idx, int protect) {
-            printf("%sing thread #%d with page index %d", protect ? "protect" : "unprotect", get_curr_tcb_id(), idx);
+            protect = 0;
+            printf("%sing page with idx %d for thread #%d\n", protect ? "protect" : "unprotect", idx,  get_curr_tcb_id());
     mprotect(GET_PAGE_ADDRESS(idx), PAGE_SIZE, protect ? PROT_NONE : PROT_READ|PROT_WRITE); 
 }
 
@@ -183,10 +204,11 @@ int page_is_empty(Page* p) {
     return ret_val;
 }
 
-void init_page(Page *p, int id, int idx, int parent) {
+void init_page(Page *p, int id, int parent, int idx) {
     p->id = id;
     p->is_free = 0;
     p->parent = parent;
+    p->idx = idx;
 }
 
 int find_empty_page(){
@@ -215,7 +237,7 @@ int find_page(int id, int size) {
 
         // cant use multipage malloc'd page
         if (is_multipage_malloc(cur)) {
-            printf("\nCANT USE PAGE, PART OF MULTIPAGE\n");
+            printf("\nCANT USE PAGE %d, PART OF MULTIPAGE\n", i);
             continue;
         }
 
@@ -229,9 +251,8 @@ int find_page(int id, int size) {
             single_chmod(i, 0);
         }
 
-        printf("\nDID A SWAP YO\n");
-        printf("\nNOW TO CHECK PAGE %d\n", cur->id);
         if (find_mementry(cur->front, size)) {
+            printf("\nFOUND A MEMENTRY AT INDEX %d for %d\n", i, id);
             return i;
         }
     }
@@ -254,10 +275,21 @@ int find_pages(int id, int req_pages, int size) {
             // cur page
             Page *cur = &MDATA[i + j];
 
-            // if page belongs to someone else, we cant use it
-            if (!is_availible_page(cur, id)) {
+            // cant use multipage malloc'd page
+            if (is_multipage_malloc(cur)) {
+                printf("\nCANT USE PAGE %d, PART OF MULTIPAGE\n", i + j);
                 all_free = 0;
                 break;
+            }
+
+            // if page belongs to someone else, we cant use it
+            if (!is_availible_page(cur, id)) {
+                int empty = find_empty_page();
+                if (empty == -1) return -1;
+                swap_pages (i, empty);
+                single_chmod(i, 0);
+                /* all_free = 0; */
+                /* break; */
             }
 
             // all req_pages must be full and free
@@ -345,7 +377,7 @@ void resize_pagetable(int len) {
 }
 
 void add_PTE(int id, int idx, int location) {
-    printf("\nADD PTE %d\n", id);
+    printf("\nADD PTE with idx %d for %d\n", idx, id);
     // make sure thread has an array in our pagetable
     if (id >= PAGETABLE_LEN) {
         resize_pagetable(id + 1);
@@ -488,7 +520,8 @@ void *create_mdata(){
             curr_page->next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE);
             curr_page->prev = prev_page;
             curr_page->front = GET_PAGE_ADDRESS(i);
-            curr_page->idx = i;
+            curr_page->idx = -1;
+            curr_page->cur_idx = i;
             curr_page->parent = NUM_PAGES - MDATA_NUM_PAGES;
         } else if (i == mdata_start_idx-1) { // new page where other sys stuff goes
             curr_page->id = 0;
@@ -497,7 +530,8 @@ void *create_mdata(){
             curr_page->next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE);
             curr_page->prev = prev_page;
             curr_page->front = GET_PAGE_ADDRESS(i);
-            curr_page->idx = i;
+            curr_page->idx = -1;
+            curr_page->cur_idx = i;
             curr_page->parent = i;
         } else {
             curr_page->id = -1;
@@ -506,7 +540,8 @@ void *create_mdata(){
             curr_page->next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE);
             curr_page->prev = prev_page;
             curr_page->front = GET_PAGE_ADDRESS(i);
-            curr_page->idx = i;
+            curr_page->idx = -1;
+            curr_page->cur_idx = i;
             curr_page->parent = -1;
         }
 
@@ -641,12 +676,12 @@ void *multi_page_malloc(int req_pages, int size, int id) {
             cur->front->is_free = 0;
             cur->front->size = size;
         } else {
-            init_page(cur, id, idx + i, idx);
+            init_page(cur, id, idx, idx + i);
         }
 
         // set PTE
-        if (id != 0 && !has_PTE(id, idx)) {
-            add_PTE(id, idx, idx);
+        if (id != 0 && !has_PTE(id, idx + i)) {
+            add_PTE(id, idx + i, idx + i);
         }
     }
 

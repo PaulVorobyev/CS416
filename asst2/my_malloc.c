@@ -66,16 +66,16 @@ void print_mem(int flag){
         id = (id != -1) ? id : 1; 
 
         Page *p = &MDATA[i];
-        printf("WE ARE THREAD %d looking at %d's Page#%d", id, p->id, i);
+        //printf("WE ARE THREAD %d looking at %d's Page#%d\n", id, p->id, i);
         if (!can_access_page(p)) {
-            printf("UNPROTECTING FOR %d", p->id);
             single_chmod(i, 0);
         }
 
         printf("\nPAGE #%d\n", i);
-        printf("page info: id=%d, is_free=%d, idx=%d, parent=%d\n", p->id, p->is_free, p->idx, p->parent);
+        printf("page info: id=%d, is_free=%d, idx=%d, parent=%d, cur_idx=%d\n", p->id, p->is_free, p->idx, p->parent, p->cur_idx);
 
         Entry *e = p->front;
+        //printf("\nFRONT %p\n", p->front);
 
         if (p->parent != -1 && p->parent != p->idx) {
             printf(ANSI_COLOR_RED "\tPART OF MULTIPAGE MALLOC\n" ANSI_COLOR_RESET);
@@ -90,7 +90,6 @@ void print_mem(int flag){
 
 
         if (!can_access_page(p)) {
-            printf("\nPROTECTING FOR %d\n", p->id);
             single_chmod(i, 1);
         }
         
