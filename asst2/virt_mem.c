@@ -49,17 +49,7 @@ void load_pages(int id) {
     while (cur) {
         if (cur->page_index != cur->page_loc) {
             printf("PAGE #%d NOT IN PROPER SPOT FOR THREAD #%d", cur->page_index, id);
-            PTE *target = PAGETABLE[MDATA[cur->page_index].id];
-            while (target){
-                if (target->page_loc == cur->page_index){
-                    target->page_loc = cur->page_loc;
-                    break;
-                }
-                target = target->next;
-            }
-
             swap_pages(cur->page_index, cur->page_loc);
-            cur->page_loc = cur->page_index;
         }
 
         single_chmod(cur->page_index, 0);
@@ -101,10 +91,38 @@ void swap_pages(int a, int b) {
     memcpy(a_loc, b_loc, PAGE_SIZE);
     memcpy(b_loc, TEMP_PAGE, PAGE_SIZE);
     
+    // update page_loc's
+    PTE *target = PAGETABLE[MDATA[a].id];
+    while (target){
+        if (target->page_loc == a){
+            target->page_loc = b;
+            break;
+        }
+        target = target->next;
+    }
+    target = PAGETABLE[MDATA[b].id];
+    while (target){
+        if (target->page_loc == b){
+            target->page_loc = a;
+            break;
+        }
+        target = target->next;
+    }
+
     // swap mdata
     Page tmp = MDATA[a];
     MDATA[a] = MDATA[b];
     MDATA[b] = tmp;
+
+    // swap fronts
+    Entry *tmpE = MDATA[a].front;
+    MDATA[a].front = MDATA[b].front;
+    MDATA[b].front = tmpE;
+
+    // swap idx's
+    int tmpIdx = MDATA[a].idx;
+    MDATA[a].idx = MDATA[b].idx;
+    MDATA[b].idx = tmpIdx;
 
     if (!can_access_page(&MDATA[a])) single_chmod(a,1);
     if (!can_access_page(&MDATA[b])) single_chmod(b,1);
@@ -153,21 +171,27 @@ void init_front(Page *p) {
 }
 
 int is_availible_page(Page *p, int id) {
+    printf("\nIS AVAILIBLE: id=%d parent=%d idx=%d\n", p->id, p->parent, p->idx);
     return (p->id == -1 || p->id == id) && (p->parent == -1 || p->parent == p->idx);
 }
 
 int page_is_empty(Page* p) {
-    return p->front->is_free && !p->front->next;
+    if (!can_access_page(p)) single_chmod(p->idx,0);
+    int ret_val = p->front->is_free && !p->front->next;
+    if (!can_access_page(p)) single_chmod(p->idx,1);
+
+    return ret_val;
 }
 
 void init_page(Page *p, int id, int idx, int parent) {
     p->id = id;
     p->is_free = 0;
-    p->idx = idx;
     p->parent = parent;
 }
 
 int find_empty_page(){
+    printf("\nlooking for empty page\n");
+
     int i = 0;
     for(; i < THREAD_NUM_PAGES; i++){
         Page * p = &MDATA[i];
@@ -186,17 +210,27 @@ int find_page(int id, int size) {
     //printf("\nWTF id=%d start=%d end=%d\n", id, start, end);
 
     for (i = start; i < end; i++) {
-        printf("SINGLE MALLOC SEARCHING PAGE#%d FOR THREAD#%d", i, id);
+        printf("\nSINGLE MALLOC SEARCHING PAGE#%d FOR THREAD#%d\n", i, id);
         Page *cur = &MDATA[i];
+
+        // cant use multipage malloc'd page
+        if (is_multipage_malloc(cur)) {
+            printf("\nCANT USE PAGE, PART OF MULTIPAGE\n");
+            continue;
+        }
 
         // if page belongs to someone else, we cant use it, so swap it out
         if (!is_availible_page(cur, id)){
-            continue;
+            printf("\nWE ARE GONNA MOVE PAGE %d for %d\n", i, id);
+            //continue;
             int empty = find_empty_page();
             if (empty == -1) return -1;
             swap_pages (i, empty);
+            single_chmod(i, 0);
         }
 
+        printf("\nDID A SWAP YO\n");
+        printf("\nNOW TO CHECK PAGE %d\n", cur->id);
         if (find_mementry(cur->front, size)) {
             return i;
         }
@@ -242,7 +276,13 @@ int find_pages(int id, int req_pages, int size) {
 }
 
 int is_multipage_malloc(Page *p) {
-    return (!p->front->next) && (!p->front->is_free) && (p->next) && (p->next->parent == p->idx);
+    if (!can_access_page(p)) single_chmod(p->idx, 0);
+
+    int ret_val = ((!p->front->next) && (!p->front->is_free) && (p->next) && (p->next->parent == p->idx)) || (p->parent != -1 && p->parent != p->idx);
+
+    if (!can_access_page(p)) single_chmod(p->idx, 1);
+
+    return ret_val;
 }
 
 /* Pagetable Operations */
@@ -466,7 +506,7 @@ void *create_mdata(){
             curr_page->next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE);
             curr_page->prev = prev_page;
             curr_page->front = GET_PAGE_ADDRESS(i);
-            curr_page->idx = -1;
+            curr_page->idx = i;
             curr_page->parent = -1;
         }
 

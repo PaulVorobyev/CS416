@@ -72,7 +72,7 @@ void print_mem(int flag){
             single_chmod(i, 0);
         }
 
-        printf("PAGE #%d\n", i);
+        printf("\nPAGE #%d\n", i);
         printf("page info: id=%d, is_free=%d, idx=%d, parent=%d\n", p->id, p->is_free, p->idx, p->parent);
 
         Entry *e = p->front;
