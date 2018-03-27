@@ -49,15 +49,16 @@
 #define SYS_PAGE_START (SHALLOC_START_PAGE + SHALLOC_NUM_PAGES)
 
 /* Globals */
-char *allmem;
-FILE *swapfile = NULL;
-int is_initialized = 0;
+extern char *allmem;
+extern FILE *swapfile;
+extern int is_initialized;
 
 /* Prototypes */
 int get_id(int flag);
 void print_pagetable();
 void print_mem(int flag);
 void print_swapfile();
+void mem_init();
 
 /* Macros */
 #define malloc(x)   mymalloc((x), __FILE__, __LINE__, THREADREQ)

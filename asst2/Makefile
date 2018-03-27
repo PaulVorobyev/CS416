@@ -23,3 +23,4 @@ structures.o: structures.c structures.h
 
 clean:
 	rm -rf *.o *.a
+
