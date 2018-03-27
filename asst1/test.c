@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include "my_pthread_t.h"
 
-#include "../asst2/my_malloc.h"
+#include "../asst2/virtual_memory.h"
 
 /* Globals */
 

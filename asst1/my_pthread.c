@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include "data_structure.h"
 
-#include "../asst2/my_malloc.h"
+#include "../asst2/virtual_memory.h"
 
 /* Constants */
 
