@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "my_pthread_t.h"
-#include "../common/data_structure.h"
 
 #include "../asst2/my_malloc.h"
 
@@ -34,7 +33,11 @@ void *bar() {
     }
 
     int * result = (int*) malloc(sizeof(int));
-    *result = 2;
+    if (!result) {
+        printf("\nOUT OF MEMORY\n");
+    } else {
+        *result = 2;
+    }
     return (void*) result;
 }
 
@@ -260,8 +263,41 @@ void test_malloc_basic() {
     puts("END TEST BASIC MALLOC");
 }
 
+void virt_mem_test(){
+    // phase b test
+    printf("Phase B\n");
+    void *a = malloc(5500);
+    void *b = malloc(5500);
+    void *c = malloc(5500);
+    free(a);
+    free(b);
+    free(c);
+
+    // phase c test
+
+
+    // phase d test
+    printf("Phase D\n");
+    void * d = shalloc(100);
+    void * e = shalloc(100);
+    void * f = shalloc(5500);
+    free(d);
+    free(e);
+    free(f);
+
+    // test accessing memory
+    printf("Phase test access\n");
+    int * g = (int *) (malloc(sizeof(int) * 10));
+    int i = 0;
+    for(; i < 10; i++){
+        g[i] = 10;
+    }
+}
+
 int main(int argc, char* argv[]) {
 	my_pthread_t t;
+
+	/*my_pthread_t t;
     pthread_create(&t, NULL, &foo, NULL);
     pthread_join(t, NULL);
     test_m_queue();
@@ -277,11 +313,27 @@ int main(int argc, char* argv[]) {
 
     printf("BEFORE 9\n");
 
-    malloc(9);
+    malloc(9);*/
 
     shalloc(100);
     shalloc(100);
     shalloc(5500);
+
+    pthread_create(&t, NULL, &foo, NULL);
+
+    malloc(10000);
+    malloc(10000);
+    malloc(10000);
+    malloc(10000);
+    malloc(10000);
+    malloc(10000);
+    malloc(10000);
+
+    malloc(4000);
+    malloc(4000);
+    malloc(4000);
+    malloc(4000);
+    malloc(4000);
 
     printf("AFTER 9\n");
 

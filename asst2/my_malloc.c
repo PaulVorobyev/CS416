@@ -39,6 +39,7 @@ int get_id(int flag){
     return id;
 }
 
+
 void print_pagetable() {
     printf("\n############### CURRENT PAGETABLE LAYOUT ###############\n");
 
@@ -59,8 +60,8 @@ void print_pagetable() {
 void print_mem(int flag){
     printf("############### CURRENT MEMORY LAYOUT ###############\n");
 
-    int i = THREAD_NUM_PAGES;
-    for (; i < THREAD_NUM_PAGES + 50; i++) {
+    int i = 0;
+    for (; i < THREAD_NUM_PAGES + 1; i++) {
         int id = get_curr_tcb_id();
         // main() tcb_id = -1 in scheduler && id=1 in mmu
         id = (id != -1) ? id : 1; 
@@ -71,6 +72,12 @@ void print_mem(int flag){
         }
 
         printf("\nPAGE #%d\n", i);
+
+        if (GET_PAGE_ADDRESS(i) == TEMP_PAGE) {
+            printf("TEMP PAGE\n");
+            continue;
+        }
+
         printf("page info: id=%d, is_free=%d, idx=%d, parent=%d, cur_idx=%d\n", p->id, p->is_free, p->idx, p->parent, p->cur_idx);
 
         Entry *e = p->front;
@@ -123,6 +130,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
         : multi_page_malloc(req_pages, size, id);
 
     print_mem(flag);
+    print_swapfile();
     print_pagetable();
 
     if (is_sched_init() && !is_in_lib()) {

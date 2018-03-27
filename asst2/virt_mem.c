@@ -2,9 +2,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "my_malloc.h"
 #include "virt_mem.h"
+
+FILE *swapfile = NULL;
 
 /* Forward Declarations */
 
@@ -18,6 +21,34 @@ int my_ceil(double num){
         return (int)num;
     }
     return (int)num + 1;
+}
+
+void print_swapfile() {
+    int pages = 5;
+    int i = 0;
+
+    for (; i < pages; i++){
+        rewind(swapfile);
+        fseek(swapfile, i * PAGE_SIZE, SEEK_SET);
+        fread(TEMP_PAGE, PAGE_SIZE, 1, swapfile);
+        fix_entry(&MDATA[ THREAD_NUM_PAGES ]);
+        Page *p =&MDATA[THREAD_NUM_PAGES];
+        printf("\nPAGE #%d\n", NUM_PAGES + i);
+        printf("page info: id=%d, is_free=%d, idx=%d, parent=%d, cur_idx=%d\n", p->id, p->is_free, p->idx, p->parent, p->cur_idx);
+
+        Entry *e = p->front;
+        //printf("\nFRONT %p\n", p->front);
+
+        if (p->parent != -1 && p->parent != p->idx) {
+            printf("\tPART OF MULTIPAGE MALLOC\n" );
+            continue;
+        }
+
+        while (e) {
+            printf("\tentry info: size=%lu, is_free=%d\n", e->size, e->is_free);
+            e = e->next;
+        }
+    }
 }
 
 /* mprotect handler */
@@ -77,6 +108,38 @@ int check_loaded_pages(int id) {
 int can_access_page(Page * p){
     return (p->id == -1 || p->id == 0 || p->id == get_curr_tcb_id());
     //return !(p->id != -1 && p->id != 0 && p->id != get_curr_tcb_id()); 
+}
+
+void swap_pages_swapfile(int mem, int swap) {
+    printf("\nSWAP PAGES %d and %d IN SWAPFILE\n", mem, swap);
+    if (!can_access_page(&MDATA[mem])) single_chmod(mem, 0);
+
+    int swap_offset = (swap - NUM_PAGES) * PAGE_SIZE;
+
+    // from swap to temp
+    fseek(swapfile, swap_offset, SEEK_SET);
+    fread(TEMP_PAGE, PAGE_SIZE, 1, swapfile);
+
+    // from mem to swap
+    fseek(swapfile, swap_offset, SEEK_SET);
+    fwrite(GET_PAGE_ADDRESS(mem), PAGE_SIZE, 1, swapfile);
+    
+    // from temp to mem
+    memcpy(GET_PAGE_ADDRESS(mem), TEMP_PAGE, PAGE_SIZE);
+
+    // swap mdata
+    Page tmp = MDATA[mem];
+    MDATA[mem] = MDATA[swap];
+    MDATA[swap] = tmp;
+
+    // copy front
+    MDATA[mem].front = MDATA[swap].front;
+    init_front(&MDATA[mem]);
+    
+    // update cur_idx
+    MDATA[mem].cur_idx = mem;
+
+    if (!can_access_page(&MDATA[mem])) single_chmod(mem, 1);
 }
 
 void swap_pages(int a, int b) {
@@ -203,6 +266,10 @@ int page_is_empty(Page* p) {
     return ret_val;
 }
 
+int page_not_owned(Page *p) {
+    return (p->parent == -1);
+}
+
 void init_page(Page *p, int id, int parent, int idx) {
     p->id = id;
     p->is_free = 0;
@@ -220,6 +287,21 @@ int find_empty_page(int start){
             return i;
         }
     }
+
+    return -1;
+}
+
+int find_empty_swapfile_page() {
+    printf("\nlooking for empty swapfile page\n");
+
+    int i = NUM_PAGES;
+    for (; i < NUM_PAGES + NUM_SWAPFILE_PAGES; i++) {
+        Page * p = &MDATA[i];
+        if (page_not_owned(p)){
+            return i;
+        }
+    }
+
     return -1;
 }
 
@@ -227,8 +309,6 @@ int find_page(int id, int size) {
     int i = 0;
     int start = id ? 0 : SYS_PAGE_START;
     int end = id ? THREAD_NUM_PAGES : (NUM_PAGES - MDATA_NUM_PAGES);
-
-    //printf("\nWTF id=%d start=%d end=%d\n", id, start, end);
 
     for (i = start; i < end; i++) {
         printf("\nSINGLE MALLOC SEARCHING PAGE#%d FOR THREAD#%d\n", i, id);
@@ -245,9 +325,19 @@ int find_page(int id, int size) {
             printf("\nWE ARE GONNA MOVE PAGE %d for %d\n", i, id);
             //continue;
             int empty = find_empty_page(cur->cur_idx);
-            if (empty == -1) return -1;
-            swap_pages (i, empty);
-            single_chmod(i, 0);
+
+            if (empty != -1) {
+                swap_pages (i, empty);
+                single_chmod(i, 0);
+            } else {
+                int empty_swap = find_empty_swapfile_page();
+
+                if (empty_swap == -1) {
+                    return -1;
+                }
+                
+                swap_pages_swapfile(i, empty_swap);
+            }
         }
 
         if (find_mementry(cur->front, size)) {
@@ -272,6 +362,7 @@ int find_pages(int id, int req_pages, int size) {
 
         for (j = 0; j < req_pages; j++) {
             if ((i + j) >= end) {
+                printf("\nOUT OF BOUNDS\n");
                 return -1;
             }
 
@@ -288,11 +379,14 @@ int find_pages(int id, int req_pages, int size) {
             // if page belongs to someone else, we cant use it
             if (!is_availible_page(cur, id)) {
                 int empty = find_empty_page(cur->cur_idx);
-                if (empty == -1) return -1;
+
+                if (empty == -1) {
+                    all_free = 0;
+                    break;
+                }
+
                 swap_pages (i + j, empty);
                 single_chmod(i, 0);
-                /* all_free = 0; */
-                /* break; */
             }
 
             // all req_pages must be full and free
@@ -424,6 +518,14 @@ void set_PTE_location(int id, int idx, int location) {
 
 /* Entry Operations */
 
+void fix_entry(Page *p){
+    Entry *e = p->front;
+    while (e->next){
+        e->next = (Entry *) ((char *)e + (e->size + sizeof(Entry)));
+        e = e->next;
+    }
+}
+
 Entry *get_prev_entry(Page *p, Entry *e) {
     Entry *cur = p->front;
     while (cur->next) {
@@ -497,7 +599,7 @@ Entry *find_mementry_for_data(Page *p, void* data) {
 
 void *create_mdata(){
     printf("Creating page meta data \n");
-    int pages_needed = my_ceil((double)MDATA_SIZE / (double)PAGE_SIZE);
+    int pages_needed = MDATA_NUM_PAGES;
 
     printf("NUM PAGES FOR MDATA %d\n", pages_needed);
 
@@ -523,7 +625,7 @@ void *create_mdata(){
             curr_page->next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE);
             curr_page->prev = prev_page;
             curr_page->front = GET_PAGE_ADDRESS(i);
-            curr_page->idx = -1;
+            curr_page->idx = i;
             curr_page->cur_idx = i;
             curr_page->parent = NUM_PAGES - MDATA_NUM_PAGES;
         } else if (i == mdata_start_idx-1) { // new page where other sys stuff goes
@@ -558,6 +660,29 @@ void *create_mdata(){
         prev_page = curr_page;
         curr_page = curr_page->next;
     }
+
+    // init mdata for swap file
+    for (; i < NUM_PAGES + NUM_SWAPFILE_PAGES; i++) {
+        curr_page->id = -1;
+        curr_page->is_free = 1;
+        curr_page->mem_free = PAGE_SIZE;
+        curr_page->next = (Page *) ( (char *)curr_page + PAGE_STRUCT_SIZE);
+        curr_page->prev = prev_page;
+        curr_page->front = GET_PAGE_ADDRESS(i);
+        curr_page->idx = -1;
+        curr_page->cur_idx = i;
+        curr_page->parent = -1;
+    }
+
+    // init swapfile pages
+    for (i = 0; i < NUM_SWAPFILE_PAGES; i++) {
+        int swap_offset = i * PAGE_SIZE;
+
+        // from temp to swap
+        fseek(swapfile, swap_offset, SEEK_SET);
+        int read = fwrite(GET_PAGE_ADDRESS(0), PAGE_SIZE, 1, swapfile);
+    }
+
     *mdata_entry = (Entry) {
         .size = MDATA_SIZE,
             .next = NULL,
@@ -617,10 +742,19 @@ void *create_pagetable(void * end_of_mdata){
     return (void*)(remaining_entry + 1);
 }
 
+void make_swapfile() {
+    int num_bytes = SWAPFILE_SIZE;
+    swapfile = fopen("swapfile", "w+");
+    fseek(swapfile, num_bytes, SEEK_SET);
+    fputc('\0', swapfile);
+}
+
 void mem_init(){
     printf("MEM INIT\n");
 
     posix_memalign((void**)&allmem, PAGE_SIZE, ARRAY_SIZE);
+
+    make_swapfile();
 
     void * end_of_mdata = create_mdata();
     create_pagetable(end_of_mdata);
@@ -644,7 +778,10 @@ void *single_page_malloc(int size, int id) {
 
     int idx = find_page(id, size);
 
-    if (idx == -1) return NULL;
+    if (idx == -1) {
+        printf("CANT GET A PAGE FOR %d", id);
+        return NULL;
+    }
 
     printf("found an entry\n");
 

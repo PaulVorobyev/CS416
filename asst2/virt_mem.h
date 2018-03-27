@@ -8,6 +8,8 @@
 
 // Size of total memory array
 #define ARRAY_SIZE (8388608)
+#define SWAPFILE_SIZE (ARRAY_SIZE * 2)
+#define NUM_SWAPFILE_PAGES ((int)(SWAPFILE_SIZE/PAGE_SIZE))
 // Size of Page struct
 #define PAGE_STRUCT_SIZE (sizeof(struct Page_))
 // Size of the system page itself
@@ -17,7 +19,7 @@
 // max size of a mementry
 #define MAX_ENTRY_SIZE (PAGE_SIZE - sizeof(Entry))
 // SIZE OF MDATA IN PAGE NUMBERS //28-ish
-#define MDATA_NUM_PAGES (my_ceil((double)(sizeof(Page) * NUM_PAGES) / (double)PAGE_SIZE))
+#define MDATA_NUM_PAGES (my_ceil((double)(sizeof(Page) * (NUM_PAGES + NUM_SWAPFILE_PAGES)) / (double)PAGE_SIZE))
 // size of mdata
 #define MDATA_SIZE (MDATA_NUM_PAGES*PAGE_SIZE)
 // proper address for a Page in allmem, given its idx
@@ -32,7 +34,7 @@
 #define GET_NUM_PTES(x) (((Entry*)(((char*) (&PAGETABLE[x][0])) - sizeof(Entry)))->size / sizeof(PTE))
 // get the length of the pagetable
 #define PAGETABLE_LEN (((Entry*)PAGETABLE - 1)->size / sizeof(PTE*))
-#define SYS_NUM_PAGES (NUM_PAGES / 2)
+#define SYS_NUM_PAGES (NUM_PAGES - 21)
 #define THREAD_NUM_PAGES (NUM_PAGES - SYS_NUM_PAGES)
 #define TEMP_PAGE (GET_PAGE_ADDRESS(THREAD_NUM_PAGES))
 #define SHALLOC_NUM_PAGES (4)
@@ -80,6 +82,7 @@ typedef struct SysInfo_ {
 
 /* Tools */
 int my_ceil(double num);
+void print_swapfile();
 
 /* mprotect handler */
 
@@ -113,6 +116,7 @@ Entry *get_prev_entry(Page *p, Entry *e);
 void coalesce(Entry *e, Entry *prev);
 void split(Entry *e, int size);
 Entry *find_mementry_for_data(Page *p, void* data);
+void fix_entry(Page *p);
 
 /* Memory init */
 void *create_mdata();
