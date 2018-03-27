@@ -67,7 +67,6 @@ int find_page(int id, int size) {
         // if page belongs to someone else, we cant use it, so swap it out
         if (!is_availible_page(cur, id)){
             printf("\nWE ARE GONNA MOVE PAGE %d for %d\n", i, id);
-            //continue;
             int empty = find_empty_page(cur->cur_idx);
 
             if (empty != -1) {
@@ -120,17 +119,19 @@ int find_pages(int id, int req_pages, int size) {
                 break;
             }
 
-            // if page belongs to someone else, we cant use it
-            if (!is_availible_page(cur, id)) {
-                int empty = find_empty_page(cur->cur_idx);
-
-                if (empty == -1) {
-                    all_free = 0;
-                    break;
-                }
-
+            // if its someone else's, move it or swap
+            int empty = find_empty_page(cur->cur_idx);
+            if (empty != -1) {
                 swap_pages (i + j, empty);
                 single_chmod(i, 0);
+            } else {
+                int empty_swap = find_empty_swapfile_page();
+
+                if (empty_swap == -1) {
+                    return -1;
+                }
+                
+                swap_pages_swapfile(i, empty_swap);
             }
 
             // all req_pages must be full and free
@@ -309,7 +310,6 @@ void *multi_page_malloc(int req_pages, int size, int id) {
 
 void * mymalloc(size_t size, const char * file, int line, int flag) {
     disableAlarm();
-    /* set_in_lib(1); */
 
     if ((int)size <= 0){
         // fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line);
@@ -324,9 +324,7 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
     int size_with_entry = size + sizeof(Entry);
     int id = get_id(flag);
 
-
     printf("\n -------------- Start Malloc for thread #%d for size %d at %s:%d--------------- \n", id, (int)size, file, line);
-
 
     // the total number of requested pages
     int req_pages = my_ceil((double)size_with_entry / (double)PAGE_SIZE);
@@ -343,8 +341,6 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
         setAlarm();
     }
 
-    /* printf("\nEND MALLOC\n"); */
-    /* set_in_lib(0); */
     return data;
 }
 

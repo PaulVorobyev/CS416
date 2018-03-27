@@ -327,12 +327,8 @@ int main(int argc, char* argv[]) {
     malloc(10000);
     malloc(10000);
     malloc(10000);
-    malloc(10000);
+    malloc(6000);
 
-    malloc(4000);
-    malloc(4000);
-    malloc(4000);
-    malloc(4000);
     malloc(4000);
 
     printf("AFTER 9\n");

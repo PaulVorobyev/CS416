@@ -108,10 +108,11 @@ void print_swapfile() {
         fseek(swapfile, i * PAGE_SIZE, SEEK_SET);
         fread(TEMP_PAGE, PAGE_SIZE, 1, swapfile);
         fix_entry(&MDATA[ THREAD_NUM_PAGES ]);
-        Page *p =&MDATA[THREAD_NUM_PAGES];
+        Page *p =&MDATA[NUM_PAGES + i];
         printf("\nPAGE #%d\n", NUM_PAGES + i);
         printf("page info: id=%d, is_free=%d, idx=%d, parent=%d, cur_idx=%d\n", p->id, p->is_free, p->idx, p->parent, p->cur_idx);
 
+        p =&MDATA[THREAD_NUM_PAGES];
         Entry *e = p->front;
         //printf("\nFRONT %p\n", p->front);
 
@@ -254,7 +255,9 @@ void *create_pagetable(void * end_of_mdata){
     *page_table_outer = (PTE*) (((char*)(page_table_outer + 1)) + sizeof(Entry));
 
     // page_table inner
-    int num_sys_pages = my_ceil((double)MDATA_SIZE / (double)PAGE_SIZE) + 1;
+    // I set this to 1 becuase sys actually doesnt need any PTE's
+    // However, im afraid to set it to 0 because things might break :(
+    int num_sys_pages = 1;
     Entry *page_table_inner_entry = page_table_outer_entry->next;
     *page_table_inner_entry = (Entry) {
         .size = sizeof(PTE) * num_sys_pages,
