@@ -33,7 +33,6 @@ void load_pages(int id) {
             swap_pages(cur->page_index, cur->page_loc);
         }
 
-        cur->in_swap = 0;
         single_chmod(cur->page_index, 0);
         cur = cur->next;
     }
@@ -44,7 +43,7 @@ int check_loaded_pages(int id) {
     PTE *cur = PAGETABLE[id];
 
     while (cur) {
-        if (cur->page_index != cur->page_loc) {
+        if ((cur->in_swap) || (cur->page_index != cur->page_loc)) {
             return 0;
         }
 
@@ -154,8 +153,6 @@ int find_pages(int id, int req_pages, int size) {
     return -1;
 }
 
-/* Malloc */
-
 void *single_page_malloc(int size, int id) {
     printf("single_page_malloc() for %d\n", id);
 
@@ -210,6 +207,7 @@ void *multi_page_malloc(int req_pages, int size, int id) {
         }
     }
 
+    printf("multimalloc giving page %d for %d for %d", idx, id, req_pages);
     return (void*) (MDATA[idx].front + 1);
 }
 
@@ -257,10 +255,11 @@ void myfree(void * ptr, const char * file, int line, int flag) {
 
     intptr_t offset = (intptr_t)ptr - (intptr_t)((void*) allmem);
     int page_num = offset / PAGE_SIZE;
-    printf("~~~~~~~~~~~~ Freeing page #%d~~~~~~~~~~~~`\n", page_num);
+    int id = get_id(flag);
+    printf("~~~~~~~~~~~~ Freeing page #%d as %d~~~~~~~~~~~~`\n", page_num, id);
 
     if (page_num < 0 || page_num > NUM_PAGES) {
-        printf("ERROR: Invalid pointer given to free. %s:%d", file, line);
+        printf("\nERROR: Invalid pointer given to free. %s:%d\n", file, line);
         exit(1);
     }
     Page *p = &MDATA[page_num];
@@ -269,31 +268,42 @@ void myfree(void * ptr, const char * file, int line, int flag) {
     //printf("free size: %d\n", (int)e->size);
 
     if (!e) {
-        printf("ERROR: Invalid pointer given to free. %s:%d", file, line);
-        exit(1);
+        printf("\nERROR: Invalid pointer given to free. %s:%d\n", file, line);
     }
 
     if (e->is_free) {
-        printf("ERROR: Attempting to double free. %s:%d", file, line);
-        exit(1);
+        printf("\nERROR: Attempting to double free. %s:%d\n", file, line);
     }
 
     if (is_multipage_malloc(p)) {
-        //TODO: change parent and idx = -1
-        printf("is multi page\n");
+        int parent_idx = p->idx;
         Page *cur_p = p;
-        cur_p->front->size = PAGE_SIZE - sizeof(Entry);
-        while (cur_p->parent == p->idx) {
+        while (cur_p->id == id && cur_p->parent == parent_idx) {
             cur_p->is_free = 1;
             cur_p->parent = cur_p->idx;
             cur_p->front->is_free = 1;
+            cur_p->front->size = MAX_ENTRY_SIZE;
             
+            if (id != 0 && page_is_empty(cur_p)) {
+                int cur_idx = cur_p->idx;
+                printf("bruh %d %d", id, (int)cur_p->id);
+                clear_page(cur_p);
+                remove_PTE(id, cur_idx);
+            }
+
             cur_p = cur_p->next;
         }
+                printf("bruh %d %d %d", id, (int)cur_p->id, MDATA[1].id);
     } else {
         e->is_free = 1;
         Entry *prev = get_prev_entry(p, e);
         coalesce(e, prev);
+
+        if (id != 0 && page_is_empty(p)) {
+            int idx = p->idx;
+            clear_page(p);
+            remove_PTE(id, idx);
+        }
     }
 
     print_mem(get_id(flag));

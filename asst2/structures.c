@@ -9,31 +9,30 @@
 extern FILE *swapfile;
 
 /* Page Table Entry */
-void remove_PTE(int id){
-    printf("Clearing PTE data of of THREAD #%d\n", id);
+void remove_PTE(int id, int idx){
+    printf("Clearing PTE data of %d for THREAD #%d\n", idx, id);
     
     if (id >= PAGETABLE_LEN) return;
 
-    // Clear pages in mdata
     PTE *pte = PAGETABLE[id];
-    while (pte) {
-        printf("CLEARING PAGE %d for %d", pte->page_loc, id);
-        clear_page(&MDATA[pte->page_loc]);
+    PTE *prev_pte = NULL;
 
+    // find PTE
+    while (pte && (pte->page_index != idx)) {
+        prev_pte = pte;
         pte = pte->next;
-    } 
+    }
 
-    my_chmod(id, 0);
-
-    // Free PTEs
-    PTE *curr_pte = PAGETABLE[id];
-    PTE *next = NULL;
-    PAGETABLE[id] = NULL;
-    while(curr_pte) {
-        next = curr_pte->next;
-
-        if (next) myfree((void*) curr_pte, __FILE__, __LINE__, LIBRARYREQ);
-        curr_pte = next;
+    // remove PTE
+    if (pte) {
+        if (!prev_pte) {
+            PAGETABLE[id] = pte->next;
+        } else {
+            prev_pte->next = pte->next;
+        }
+        //myfree((void*)pte, __FILE__, __LINE__, LIBRARYREQ);
+    } else {
+        printf("CANNOT FIND PTE WITH INDEX %d for THREAD %d", idx, id);
     }
 }
 
@@ -53,8 +52,7 @@ void resize_pagetable(int len) {
     PTE **prev_pt = PAGETABLE;
 
     // copy old pt outer to new spot and update sysinfo
-    // i use 1 here because I dont have scope of LIBRARYREQ
-    PTE **pt = (PTE**) mymalloc(len * sizeof(PTE*), __FILE__, __LINE__, 1);
+    PTE **pt = (PTE**) mymalloc(len * sizeof(PTE*), __FILE__, __LINE__, LIBRARYREQ);
     memcpy((void*)pt, (void*)SYSINFO->pagetable, PAGETABLE_LEN * sizeof(PTE*));
     SYSINFO->pagetable = pt;
 
@@ -62,7 +60,7 @@ void resize_pagetable(int len) {
     int i = prev_len;
     for (; i < len; i++) PAGETABLE[i] = NULL;
 
-    free((void*) prev_pt);
+    myfree((void*) prev_pt, __FILE__, __LINE__, LIBRARYREQ);
 }
 
 void add_PTE(int id, int idx, int location) {
@@ -146,6 +144,16 @@ void swap_pages_swapfile(int mem, int swap) {
     MDATA[mem] = MDATA[swap];
     MDATA[swap] = tmp;
 
+    // swap next
+    Page * tmpNext = MDATA[mem].next;
+    MDATA[mem].next = MDATA[swap].next;
+    MDATA[swap].next = tmpNext;
+    
+    // swap prev
+    Page * tmpPrev = MDATA[mem].prev;
+    MDATA[mem].prev = MDATA[swap].prev;
+    MDATA[swap].prev = tmpPrev;
+
     // update cur_idx
     int tmpCurIdx = MDATA[mem].cur_idx;
     MDATA[mem].cur_idx = MDATA[swap].cur_idx;
@@ -181,6 +189,16 @@ void swap_pages(int a, int b) {
     MDATA[a] = MDATA[b];
     MDATA[b] = tmp;
 
+    // swap next
+    Page * tmpNext = MDATA[a].next;
+    MDATA[a].next = MDATA[b].next;
+    MDATA[b].next = tmpNext;
+    
+    // swap prev
+    Page * tmpPrev = MDATA[a].prev;
+    MDATA[a].prev = MDATA[b].prev;
+    MDATA[b].prev = tmpPrev;
+
     // swap cur_idx
     int tmpCurIdx = MDATA[a].cur_idx;
     MDATA[a].cur_idx = MDATA[b].cur_idx;
@@ -204,18 +222,17 @@ void clear_page(Page * curr){
     curr->id = -1;
     curr->is_free = 1;
     curr->mem_free = PAGE_SIZE;
-    curr->front->size = MAX_ENTRY_SIZE;
-    curr->front->next = NULL;
-    curr->front->is_free = 1 ;
-    curr->parent = curr->idx;
+    curr->parent = -1;
+    curr->idx = -1;
 }
 
 void my_chmod(int id, int protect) {
     if (id >= PAGETABLE_LEN) {
-        printf("CHMOD: THREAD#%d NOT IN PAGETABLE YET\n", id);
+        printf("CHMOD: THREAD#%d NOT IN PAGETABLE YET %d\n", id, PAGETABLE_LEN);
         return;
     }
 
+    printf("MY_CHMOD: THREAD#%d IS IN PAGETABLE%d\n", id, PAGETABLE_LEN);
     // take the tcb_id and protect flag (1 for change all pages to PROT_NONE, 0 for inverse)
     PTE *cur = PAGETABLE[id];
     while (cur){

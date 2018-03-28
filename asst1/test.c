@@ -22,7 +22,10 @@ void *foo() {
     }
 
     int * result = (int*) malloc(4500);
-    *result = 1;
+    if (result != NULL) {
+        *result = 1;
+        free((void*)result);
+    }
     return (void*) result;
 }
 

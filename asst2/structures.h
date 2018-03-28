@@ -7,9 +7,9 @@
 typedef struct Page_{
     int id; // id of TCB; -1 for empty/free page
     int is_free; // TODO: not used
-    size_t mem_free; //TODO: do we need?
-    struct Page_ * next; //TODO: do we need?
-    struct Page_ * prev; //TODO: do we need?
+    size_t mem_free; //TODO: not used
+    struct Page_ * next;
+    struct Page_ * prev;
     struct Entry_ * front;
     int idx;
     int cur_idx;
@@ -56,7 +56,7 @@ typedef struct Page_Table_Entry_{
 } PTE;
 
 void resize_pagetable(int len);
-void remove_PTE(int id);
+void remove_PTE(int id, int idx);
 int has_PTE(int id, int idx);
 void add_PTE(int id, int idx, int location);
 void set_PTE_location(int id, int idx, int location, int in_swap);
