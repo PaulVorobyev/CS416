@@ -109,7 +109,6 @@ int find_pages(int id, int req_pages, int size) {
                 return -1;
             }
 
-            // cur page
             Page *cur = &MDATA[i + j];
 
             // cant use multipage malloc'd page
@@ -119,22 +118,12 @@ int find_pages(int id, int req_pages, int size) {
                 break;
             }
 
-            // if its someone else's, move it or swap
-            if (!is_availible_page(cur, id)){
-                printf("\nWE ARE GONNA MOVE PAGE %d for %d\n", i, id);
-                int empty = find_empty_page(cur->cur_idx);
-                if (empty != -1) {
-                    swap_pages (i + j, empty);
-                    single_chmod(i, 0);
-                } else {
-                    int empty_swap = find_empty_swapfile_page();
-
-                    if (empty_swap == -1) {
-                        return -1;
-                    }
-
-                    swap_pages_swapfile(i, empty_swap);
-                }
+            // if its someone else's, and we cant move it or swap, give up
+            if (!is_availible_page(cur, id)
+                    && (find_empty_page(cur->cur_idx) == -1)
+                    && (find_empty_swapfile_page() == -1)) {
+                all_free = 0;
+                break;
             }
 
             // all req_pages must be full and free
@@ -145,6 +134,23 @@ int find_pages(int id, int req_pages, int size) {
         }
 
         if (all_free) {
+            // do whatever swapping/shuffling is needed and return
+            // the index of the first page in the group
+            for (j = 0; j < req_pages; j++) {
+                Page *cur = &MDATA[i + j];
+
+                if (!is_availible_page(cur, id)){
+                    printf("\nWE ARE GONNA TRY TO MOVE PAGE %d for %d\n", i, id);
+                    int empty = find_empty_page(cur->cur_idx);
+                    if (empty != -1) {
+                        swap_pages (i + j, empty);
+                        single_chmod(i, 0);
+                    } else {
+                        swap_pages_swapfile(i, find_empty_swapfile_page());
+                    }
+                }
+            }
+
             return i;
         }
     }
