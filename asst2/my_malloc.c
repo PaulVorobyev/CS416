@@ -275,9 +275,10 @@ void myfree(void * ptr, const char * file, int line, int flag) {
     }
 
     if (is_multipage_malloc(p)) {
+        int parent_id = p->id;
         int parent_idx = p->idx;
         Page *cur_p = p;
-        while (cur_p->id == id && cur_p->parent == parent_idx) {
+        while (cur_p->id == parent_id && cur_p->parent == parent_idx) {
             cur_p->is_free = 1;
             cur_p->parent = cur_p->idx;
             cur_p->front->is_free = 1;

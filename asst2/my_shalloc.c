@@ -100,11 +100,13 @@ void *multi_page_shalloc(int req_pages, int size) {
 
         if (i == 0) {
             init_page(cur, -1, idx, idx);
-            cur->front->is_free = 0;
             cur->front->size = size;
         } else {
             init_page(cur, -1, idx, idx + i);
         }
+
+        // mark as taken
+        cur->front->is_free = 0;
     }
 
     return (void*) (MDATA[idx].front + 1);
@@ -128,7 +130,7 @@ void *shalloc(size_t size) {
     int id = get_id(THREADREQ);
 
 
-    printf("\n -------------- Start Malloc for thread #%d for size %d--------------- \n", id, (int)size);
+    printf("\n -------------- Start Shalloc for thread #%d for size %d--------------- \n", id, (int)size);
 
 
     // the total number of requested pages
