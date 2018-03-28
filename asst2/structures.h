@@ -6,14 +6,12 @@
 /* Page */
 typedef struct Page_{
     int id; // id of TCB; -1 for empty/free page
-    //TODO: can later change to check if mem_free == however much a freepage is
-    int is_free; // 1 for free; 0 for malloc'd
-    size_t mem_free; // the amount of memory that is free inside this page TODO: do we need?
+    int is_free; // TODO: not used
+    size_t mem_free; //TODO: do we need?
     struct Page_ * next; //TODO: do we need?
     struct Page_ * prev; //TODO: do we need?
     struct Entry_ * front;
     int idx;
-    // TODO: unused
     int cur_idx;
     int parent; // for multipage requests, idx of first page
 } Page;
@@ -49,13 +47,19 @@ Entry *get_prev_entry(Page *p, Entry *e);
 void fix_entry(Page *p);
 
 /* Page Table Entry */
-// TODO: add a field for if in swap file
 typedef struct Page_Table_Entry_{
     // page_table[x] == all of the Page_Table_Entry's with tcb_id x
     int page_index; // virtual address
     int page_loc; // physical address
-    struct Page_Table_Entry_ * next; //TODO: do we need?
+    int in_swap; // 0 = no, 1 = yes
+    struct Page_Table_Entry_ * next;
 } PTE;
+
+void resize_pagetable(int len);
+void remove_PTE(int id);
+int has_PTE(int id, int idx);
+void add_PTE(int id, int idx, int location);
+void set_PTE_location(int id, int idx, int location, int in_swap);
 
 /* Sys Info */
 typedef struct SysInfo_ {

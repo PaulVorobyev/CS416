@@ -8,6 +8,113 @@
 
 extern FILE *swapfile;
 
+/* Page Table Entry */
+void remove_PTE(int id){
+    printf("Clearing PTE data of of THREAD #%d\n", id);
+    
+    if (id >= PAGETABLE_LEN) return;
+
+    // Clear pages in mdata
+    PTE *pte = PAGETABLE[id];
+    while (pte) {
+        printf("CLEARING PAGE %d for %d", pte->page_loc, id);
+        clear_page(&MDATA[pte->page_loc]);
+
+        pte = pte->next;
+    } 
+
+    my_chmod(id, 0);
+
+    // Free PTEs
+    PTE *curr_pte = PAGETABLE[id];
+    PTE *next = NULL;
+    PAGETABLE[id] = NULL;
+    while(curr_pte) {
+        next = curr_pte->next;
+
+        if (next) myfree((void*) curr_pte, __FILE__, __LINE__, LIBRARYREQ);
+        curr_pte = next;
+    }
+}
+
+int has_PTE(int id, int idx) {
+    if (id >= PAGETABLE_LEN) return 0;
+
+    printf("IDX: %d", id);
+
+    PTE* cur = PAGETABLE[id];
+    while (cur && cur->page_index != idx) cur = cur->next;
+
+    return cur ? 1 : 0;
+}
+
+void resize_pagetable(int len) {
+    int prev_len = PAGETABLE_LEN;
+    PTE **prev_pt = PAGETABLE;
+
+    // copy old pt outer to new spot and update sysinfo
+    // i use 1 here because I dont have scope of LIBRARYREQ
+    PTE **pt = (PTE**) mymalloc(len * sizeof(PTE*), __FILE__, __LINE__, 1);
+    memcpy((void*)pt, (void*)SYSINFO->pagetable, PAGETABLE_LEN * sizeof(PTE*));
+    SYSINFO->pagetable = pt;
+
+    // init any new threads in the array to NULL
+    int i = prev_len;
+    for (; i < len; i++) PAGETABLE[i] = NULL;
+
+    free((void*) prev_pt);
+}
+
+void add_PTE(int id, int idx, int location) {
+    printf("\nADD PTE with idx %d for %d\n", idx, id);
+    // make sure thread has an array in our pagetable
+    if (id >= PAGETABLE_LEN) {
+        resize_pagetable(id + 1);
+    }
+
+    // if array is null, init it with size of 1 and add the PTE
+    if (!PAGETABLE[id]) {
+        PAGETABLE[id] = (PTE*) mymalloc(sizeof(PTE), __FILE__, __LINE__, LIBRARYREQ);
+        *PAGETABLE[id] = (PTE) {
+            .page_index = idx,
+            .page_loc = location,
+            .in_swap = 0,
+            .next = NULL };
+    } else { // add to end
+        PTE* cur = PAGETABLE[id];
+
+        // goto last entry
+        while (cur->next) cur = cur->next;
+
+        cur->next = (PTE*) mymalloc(sizeof(PTE), __FILE__, __LINE__, LIBRARYREQ);
+        *cur->next = (PTE) {
+            .page_index = idx,
+            .page_loc = location,
+            .in_swap = 0,
+            .next = NULL };
+    }
+}
+
+void set_PTE_location(int id, int idx, int location, int in_swap) {
+    // handle empty page case
+    if (id == -1) {
+        return;
+    }
+
+    PTE *ptes = PAGETABLE[id];
+    PTE *cur = &ptes[0];
+
+    while (cur) {
+        if (cur->page_index == idx) {
+            cur->page_loc = location;
+            cur->in_swap = in_swap;
+            break;
+        }
+
+        cur = cur->next;
+    }
+}
+
 /* Page */
 int can_access_page(Page * p){
     return (p->id == -1 || p->id == 0 || p->id == get_curr_tcb_id());
@@ -30,18 +137,26 @@ void swap_pages_swapfile(int mem, int swap) {
     // from temp to mem
     memcpy(GET_PAGE_ADDRESS(mem), TEMP_PAGE, PAGE_SIZE);
 
+    // update PTE location
+    set_PTE_location(MDATA[mem].id, MDATA[mem].idx, swap - NUM_PAGES, 1);
+    set_PTE_location(MDATA[swap].id, MDATA[swap].idx, mem, 0);
+
     // swap mdata
     Page tmp = MDATA[mem];
     MDATA[mem] = MDATA[swap];
     MDATA[swap] = tmp;
 
+    // update cur_idx
+    int tmpCurIdx = MDATA[mem].cur_idx;
+    MDATA[mem].cur_idx = MDATA[swap].cur_idx;
+    MDATA[swap].cur_idx = tmpCurIdx;
+
     // copy front
     MDATA[mem].front = MDATA[swap].front;
-    init_front(&MDATA[mem]);
-    
-    // update cur_idx
-    MDATA[mem].cur_idx = mem;
 
+    // fix nexts
+    fix_entry(&MDATA[mem]);
+    
     if (!can_access_page(&MDATA[mem])) single_chmod(mem, 1);
 }
 
@@ -58,22 +173,8 @@ void swap_pages(int a, int b) {
     memcpy(b_loc, TEMP_PAGE, PAGE_SIZE);
     
     // update page_loc's
-    PTE *target = PAGETABLE[MDATA[a].id];
-    while (target){
-        if (target->page_loc == a){
-            target->page_loc = b;
-            break;
-        }
-        target = target->next;
-    }
-    target = PAGETABLE[MDATA[b].id];
-    while (target){
-        if (target->page_loc == b){
-            target->page_loc = a;
-            break;
-        }
-        target = target->next;
-    }
+    set_PTE_location(MDATA[a].id, MDATA[a].idx, b, 0);
+    set_PTE_location(MDATA[b].id, MDATA[b].idx, a, 0);
 
     // swap mdata
     Page tmp = MDATA[a];
@@ -86,28 +187,13 @@ void swap_pages(int a, int b) {
     MDATA[b].cur_idx = tmpCurIdx;
 
     // fix entry next's
-    Entry *e = MDATA[a].front;
-    while (e->next) {
-        e->next = (Entry*) ((char*)e + (e->size + sizeof(Entry)));
-
-        e = e->next;
-    }
-    e = MDATA[b].front;
-    while (e->next) {
-        e->next = (Entry*) ((char*)e + (e->size + sizeof(Entry)));
-
-        e = e->next;
-    }
+    fix_entry(&MDATA[a]);
+    fix_entry(&MDATA[b]);
 
     // swap fronts
     Entry *tmpE = MDATA[a].front;
     MDATA[a].front = MDATA[b].front;
     MDATA[b].front = tmpE;
-
-    // swap idx's
-    /* int tmpIdx = MDATA[a].idx; */
-    /* MDATA[a].idx = MDATA[b].idx; */
-    /* MDATA[b].idx = tmpIdx; */
 
     if (!can_access_page(&MDATA[a])) single_chmod(a,1);
     if (!can_access_page(&MDATA[b])) single_chmod(b,1);

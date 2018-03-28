@@ -47,7 +47,7 @@ void print_pagetable() {
 
         PTE *pte = &ptes[0];
         while (pte) {
-            printf("\tpage_index=%d, page_loc=%d\n", pte->page_index, pte->page_loc);
+            printf("\tpage_index=%d, page_loc=%d, in_swap=%d\n", pte->page_index, pte->page_loc, pte->in_swap);
 
             pte = pte->next;
         }
@@ -290,12 +290,8 @@ void make_swapfile() {
 }
 
 void mem_init(){
-    printf("MEM INIT\n");
-
     posix_memalign((void**)&allmem, PAGE_SIZE, ARRAY_SIZE);
-
     make_swapfile();
-
     void * end_of_mdata = create_mdata();
     create_pagetable(end_of_mdata);
 

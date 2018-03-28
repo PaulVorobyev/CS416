@@ -120,18 +120,21 @@ int find_pages(int id, int req_pages, int size) {
             }
 
             // if its someone else's, move it or swap
-            int empty = find_empty_page(cur->cur_idx);
-            if (empty != -1) {
-                swap_pages (i + j, empty);
-                single_chmod(i, 0);
-            } else {
-                int empty_swap = find_empty_swapfile_page();
+            if (!is_availible_page(cur, id)){
+                printf("\nWE ARE GONNA MOVE PAGE %d for %d\n", i, id);
+                int empty = find_empty_page(cur->cur_idx);
+                if (empty != -1) {
+                    swap_pages (i + j, empty);
+                    single_chmod(i, 0);
+                } else {
+                    int empty_swap = find_empty_swapfile_page();
 
-                if (empty_swap == -1) {
-                    return -1;
+                    if (empty_swap == -1) {
+                        return -1;
+                    }
+
+                    swap_pages_swapfile(i, empty_swap);
                 }
-                
-                swap_pages_swapfile(i, empty_swap);
             }
 
             // all req_pages must be full and free
@@ -147,108 +150,6 @@ int find_pages(int id, int req_pages, int size) {
     }
 
     return -1;
-}
-
-/* Pagetable Operations */
-
-// for when a tcb terminates/finishes
-void remove_PTE(int id){
-    printf("Clearing PTE data of of THREAD #%d\n", id);
-    
-    if (id >= PAGETABLE_LEN) return;
-
-    // Clear pages in mdata
-    PTE *pte = PAGETABLE[id];
-    while (pte) {
-        printf("CLEARING PAGE %d for %d", pte->page_loc, id);
-        clear_page(&MDATA[pte->page_loc]);
-
-        pte = pte->next;
-    } 
-
-    my_chmod(id, 0);
-
-    // Free PTEs
-    PTE *curr_pte = PAGETABLE[id];
-    PTE *next = NULL;
-    PAGETABLE[id] = NULL;
-    while(curr_pte) {
-        next = curr_pte->next;
-
-        if (next) myfree((void*) curr_pte, __FILE__, __LINE__, LIBRARYREQ);
-        curr_pte = next;
-    }
-}
-
-int has_PTE(int id, int idx) {
-    if (id >= PAGETABLE_LEN) return 0;
-
-    printf("IDX: %d", id);
-
-    PTE* cur = PAGETABLE[id];
-    while (cur && cur->page_index != idx) cur = cur->next;
-
-    return cur ? 1 : 0;
-}
-
-void resize_pagetable(int len) {
-    int prev_len = PAGETABLE_LEN;
-    PTE **prev_pt = PAGETABLE;
-
-    // copy old pt outer to new spot and update sysinfo
-    // i use 1 here because I dont have scope of LIBRARYREQ
-    PTE **pt = (PTE**) mymalloc(len * sizeof(PTE*), __FILE__, __LINE__, 1);
-    memcpy((void*)pt, (void*)SYSINFO->pagetable, PAGETABLE_LEN * sizeof(PTE*));
-    SYSINFO->pagetable = pt;
-
-    // init any new threads in the array to NULL
-    int i = prev_len;
-    for (; i < len; i++) PAGETABLE[i] = NULL;
-
-    free((void*) prev_pt);
-}
-
-void add_PTE(int id, int idx, int location) {
-    printf("\nADD PTE with idx %d for %d\n", idx, id);
-    // make sure thread has an array in our pagetable
-    if (id >= PAGETABLE_LEN) {
-        resize_pagetable(id + 1);
-    }
-
-    // if array is null, init it with size of 1 and add the PTE
-    if (!PAGETABLE[id]) {
-        // i use 1 here because I dont have scope of LIBRARYREQ
-        PAGETABLE[id] = (PTE*) mymalloc(sizeof(PTE), __FILE__, __LINE__, 1);
-        *PAGETABLE[id] = (PTE) {
-            .page_index = idx,
-            .page_loc = location,
-            .next = NULL };
-    } else { // add to end
-        PTE* cur = PAGETABLE[id];
-
-        // goto last entry
-        while (cur->next) cur = cur->next;
-
-        // i use 1 here because I dont have scope of LIBRARYREQ
-        cur->next = (PTE*) mymalloc(sizeof(PTE), __FILE__, __LINE__, 1);
-        *cur->next = (PTE) {
-            .page_index = idx,
-            .page_loc = location,
-            .next = NULL };
-    }
-}
-
-void set_PTE_location(int id, int idx, int location) {
-    PTE *ptes = PAGETABLE[id];
-    PTE *cur = &ptes[0];
-
-    while (cur) {
-        if (cur->page_index == idx) {
-            cur->page_loc = location;
-        }
-
-        cur = cur->next;
-    }
 }
 
 /* Malloc */
