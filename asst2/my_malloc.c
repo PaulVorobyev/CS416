@@ -194,11 +194,13 @@ void *multi_page_malloc(int req_pages, int size, int id) {
 
         if (i == 0) {
             init_page(cur, id, idx, idx);
-            cur->front->is_free = 0;
             cur->front->size = size;
         } else {
             init_page(cur, id, idx, idx + i);
         }
+        
+        // mark as taken
+        cur->front->is_free = 0;
 
         // set PTE
         if (id != 0 && !has_PTE(id, idx + i)) {

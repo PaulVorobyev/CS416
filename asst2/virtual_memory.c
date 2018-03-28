@@ -82,7 +82,6 @@ void print_mem(int flag){
 
         if (p->parent != -1 && p->parent != p->idx) {
             printf(ANSI_COLOR_RED "\tPART OF MULTIPAGE MALLOC\n" ANSI_COLOR_RESET);
-            continue;
         }
 
         while (e) {
