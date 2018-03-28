@@ -55,8 +55,24 @@ int check_loaded_pages(int id) {
 
 int find_page(int id, int size) {
     int i = 0;
-    int start = id ? 0 : SYS_PAGE_START;
-    int end = id ? THREAD_NUM_PAGES : (NUM_PAGES - MDATA_NUM_PAGES);
+    int start = -1;
+    int end = -1;
+
+    switch (id) {
+        case 0:
+            start = SYS_PAGE_START;
+            end = NUM_PAGES - MDATA_NUM_PAGES;
+            break;
+
+        case -1:
+            start = SHALLOC_START_PAGE;
+            end = SHALLOC_START_PAGE + SHALLOC_NUM_PAGES;
+            break;
+
+        default:
+            start = 0;
+            end = THREAD_NUM_PAGES;
+    }
 
     for (i = start; i < end; i++) {
         printf("\nSINGLE MALLOC SEARCHING PAGE#%d FOR THREAD#%d\n", i, id);
@@ -93,10 +109,25 @@ int find_page(int id, int size) {
 int find_pages(int id, int req_pages, int size) {
     int i = 0;
     int j = 0;
+    int start = -1;
+    int end = -1;
 
-    int start = id ? 0 : SYS_PAGE_START;
-    int end = id ? THREAD_NUM_PAGES : (NUM_PAGES - MDATA_NUM_PAGES);
-        
+    switch (id) {
+        case 0:
+            start = SYS_PAGE_START;
+            end = NUM_PAGES - MDATA_NUM_PAGES;
+            break;
+
+        case -1:
+            start = SHALLOC_START_PAGE;
+            end = SHALLOC_START_PAGE + SHALLOC_NUM_PAGES;
+            break;
+
+        default:
+            start = 0;
+            end = THREAD_NUM_PAGES;
+    }
+
     for (i = start; i < end; i++) {
         printf("MULTI MALLOC SEARCHING PAGE#%d FOR THREAD#%d", i, id);
         int all_free = 1;
@@ -175,7 +206,7 @@ void *single_page_malloc(int size, int id) {
     e->is_free = 0;
 
     // set PTE
-    if (id != 0 && !has_PTE(id, idx)) {
+    if (!has_PTE(id, idx)) {
         add_PTE(id, idx, idx);
     }
 
@@ -202,7 +233,7 @@ void *multi_page_malloc(int req_pages, int size, int id) {
         cur->front->is_free = 0;
 
         // set PTE
-        if (id != 0 && !has_PTE(id, idx + i)) {
+        if (!has_PTE(id, idx + i)) {
             add_PTE(id, idx + i, idx + i);
         }
     }
@@ -284,7 +315,7 @@ void myfree(void * ptr, const char * file, int line, int flag) {
             cur_p->front->is_free = 1;
             cur_p->front->size = MAX_ENTRY_SIZE;
             
-            if (id != 0 && page_is_empty(cur_p)) {
+            if (page_is_empty(cur_p)) {
                 int cur_idx = cur_p->idx;
                 printf("bruh %d %d", id, (int)cur_p->id);
                 clear_page(cur_p);
@@ -299,7 +330,7 @@ void myfree(void * ptr, const char * file, int line, int flag) {
         Entry *prev = get_prev_entry(p, e);
         coalesce(e, prev);
 
-        if (id != 0 && page_is_empty(p)) {
+        if (page_is_empty(p)) {
             int idx = p->idx;
             clear_page(p);
             remove_PTE(id, idx);

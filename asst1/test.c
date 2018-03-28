@@ -320,7 +320,9 @@ int main(int argc, char* argv[]) {
 
     shalloc(100);
     shalloc(100);
+    void * x = shalloc(5500);
     shalloc(5500);
+    free(x);
 
     pthread_create(&t, NULL, &foo, NULL);
 

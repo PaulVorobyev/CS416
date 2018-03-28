@@ -34,6 +34,8 @@ int get_id(int flag){
     if (is_in_lib()) {
         id = 0;
     }
+
+    if (flag == SHAREDREQ) id = -1;
     
     return id;
 }
@@ -59,7 +61,7 @@ void print_mem(int flag){
     printf("############### CURRENT MEMORY LAYOUT ###############\n");
 
     int i = 0;
-    for (; i < THREAD_NUM_PAGES + 1; i++) {
+    for (; i < THREAD_NUM_PAGES + 8; i++) {
         int id = get_curr_tcb_id();
         // main() tcb_id = -1 in scheduler && id=1 in mmu
         id = (id != -1) ? id : 1; 

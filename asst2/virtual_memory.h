@@ -5,7 +5,6 @@
 #include <unistd.h>
 
 #include "./my_malloc.h"
-#include "./my_shalloc.h"
 #include "./structures.h"
 
 /* Definitions */
@@ -13,6 +12,8 @@
 #define LIBRARYREQ 1
 // // USR malloc
 #define THREADREQ 0
+// // shalloc
+#define SHAREDREQ 2
 // Size of total memory array
 #define ARRAY_SIZE (8388608)
 #define SWAPFILE_SIZE (ARRAY_SIZE * 2)
@@ -64,6 +65,6 @@ void mem_init();
 /* Macros */
 #define malloc(x)   mymalloc((x), __FILE__, __LINE__, THREADREQ)
 #define free(x)     myfree((x), __FILE__, __LINE__, THREADREQ)
-#define shalloc(x)     shalloc(x)
+#define shalloc(x)   mymalloc((x), __FILE__, __LINE__, SHAREDREQ)
 
 #endif

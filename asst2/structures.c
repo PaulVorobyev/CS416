@@ -12,7 +12,7 @@ extern FILE *swapfile;
 void remove_PTE(int id, int idx){
     printf("Clearing PTE data of %d for THREAD #%d\n", idx, id);
     
-    if (id >= PAGETABLE_LEN) return;
+    if ((id >= PAGETABLE_LEN) || (id <= 0)) return;
 
     PTE *pte = PAGETABLE[id];
     PTE *prev_pte = NULL;
@@ -38,6 +38,7 @@ void remove_PTE(int id, int idx){
 
 int has_PTE(int id, int idx) {
     if (id >= PAGETABLE_LEN) return 0;
+    if (id <= 0) return 1;
 
     printf("IDX: %d", id);
 
@@ -66,6 +67,8 @@ void resize_pagetable(int len) {
 void add_PTE(int id, int idx, int location) {
     printf("\nADD PTE with idx %d for %d\n", idx, id);
     // make sure thread has an array in our pagetable
+    if (id <= 0 ) return;
+
     if (id >= PAGETABLE_LEN) {
         resize_pagetable(id + 1);
     }
