@@ -21,7 +21,7 @@ void *foo() {
         //printf("foo! %d\n", i);
     }
 
-    int * result = (int*) malloc(sizeof(int));
+    int * result = (int*) malloc(4500);
     *result = 1;
     return (void*) result;
 }
@@ -330,6 +330,9 @@ int main(int argc, char* argv[]) {
     malloc(6000);
 
     malloc(4000);
+    malloc(5100);
+
+    pthread_create(&t, NULL, &foo, NULL);
 
     printf("AFTER 9\n");
 

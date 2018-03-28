@@ -107,7 +107,7 @@ void print_swapfile() {
         fseek(swapfile, i * PAGE_SIZE, SEEK_SET);
         fread(TEMP_PAGE, PAGE_SIZE, 1, swapfile);
         fix_entry(&MDATA[ THREAD_NUM_PAGES ]);
-        Page *p =&MDATA[NUM_PAGES + i];
+        Page *p = &MDATA[NUM_PAGES + i];
         printf("\nPAGE #%d\n", NUM_PAGES + i);
         printf("page info: id=%d, is_free=%d, idx=%d, parent=%d, cur_idx=%d\n", p->id, p->is_free, p->idx, p->parent, p->cur_idx);
 
@@ -209,6 +209,9 @@ void *create_mdata(){
         curr_page->idx = -1;
         curr_page->cur_idx = i;
         curr_page->parent = -1;
+
+        prev_page = curr_page;
+        curr_page = curr_page->next;
     }
 
     // init swapfile pages
@@ -217,13 +220,14 @@ void *create_mdata(){
 
         // from temp to swap
         fseek(swapfile, swap_offset, SEEK_SET);
-        int read = fwrite(GET_PAGE_ADDRESS(0), PAGE_SIZE, 1, swapfile);
+        fwrite(GET_PAGE_ADDRESS(0), PAGE_SIZE, 1, swapfile);
     }
 
     *mdata_entry = (Entry) {
         .size = MDATA_SIZE,
             .next = NULL,
             .is_free = 0 };
+
     curr_page->next = NULL;
 
     return (void *)((char *)SYSINFO - sizeof(Entry));

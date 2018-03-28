@@ -59,21 +59,21 @@ int find_page(int id, int size) {
         Page *cur = &MDATA[i];
 
         // cant use multipage malloc'd page
-        if (is_multipage_malloc(cur)) {
+        /*if (is_multipage_malloc(cur)) {
             printf("\nCANT USE PAGE %d, PART OF MULTIPAGE\n", i);
             continue;
-        }
+        }*/
 
         // if page belongs to someone else, we cant use it, so swap it out
         if (!is_availible_page(cur, id)){
             printf("\nWE ARE GONNA MOVE PAGE %d for %d\n", i, id);
-            int empty = find_empty_page(cur->cur_idx);
+            int empty = find_empty_page(0);
 
             if (empty != -1) {
                 swap_pages (i, empty);
                 single_chmod(i, 0);
             } else {
-                int empty_swap = find_empty_swapfile_page();
+                int empty_swap = find_empty_swapfile_page(2048);
 
                 if (empty_swap == -1) {
                     return -1;
@@ -102,6 +102,7 @@ int find_pages(int id, int req_pages, int size) {
     for (i = start; i < end; i++) {
         printf("MULTI MALLOC SEARCHING PAGE#%d FOR THREAD#%d", i, id);
         int all_free = 1;
+        int prev_empty_swap = 2047;
 
         for (j = 0; j < req_pages; j++) {
             if ((i + j) >= end) {
@@ -111,17 +112,19 @@ int find_pages(int id, int req_pages, int size) {
 
             Page *cur = &MDATA[i + j];
 
-            // cant use multipage malloc'd page
+            /* cant use multipage malloc'd page
             if (is_multipage_malloc(cur)) {
                 printf("\nCANT USE PAGE %d, PART OF MULTIPAGE\n", i + j);
                 all_free = 0;
                 break;
-            }
+            }*/
 
             // if its someone else's, and we cant move it or swap, give up
-            if (!is_availible_page(cur, id)
-                    && (find_empty_page(cur->cur_idx) == -1)
-                    && (find_empty_swapfile_page() == -1)) {
+            if (!is_availible_page(cur, id) && (find_empty_page(i+j) == -1)) {
+                if ((prev_empty_swap = find_empty_swapfile_page(prev_empty_swap + 1)) != -1) {
+                    continue;
+                }
+
                 all_free = 0;
                 break;
             }
@@ -134,19 +137,20 @@ int find_pages(int id, int req_pages, int size) {
         }
 
         if (all_free) {
+            int hack = 2047;
             // do whatever swapping/shuffling is needed and return
             // the index of the first page in the group
             for (j = 0; j < req_pages; j++) {
                 Page *cur = &MDATA[i + j];
 
                 if (!is_availible_page(cur, id)){
-                    printf("\nWE ARE GONNA TRY TO MOVE PAGE %d for %d\n", i, id);
-                    int empty = find_empty_page(cur->cur_idx);
+                    printf("\nWE ARE GONNA TRY TO MOVE PAGE %d for %d\n", i+j, id);
+                    int empty = find_empty_page(i + j);
                     if (empty != -1) {
                         swap_pages (i + j, empty);
-                        single_chmod(i, 0);
+                        single_chmod(i+j, 0);
                     } else {
-                        swap_pages_swapfile(i, find_empty_swapfile_page());
+                        swap_pages_swapfile(i+j, hack = find_empty_swapfile_page(hack + 1));
                     }
                 }
             }

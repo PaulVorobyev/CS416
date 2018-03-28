@@ -243,7 +243,7 @@ void init_front(Page *p) {
 
 int is_availible_page(Page *p, int id) {
     printf("\nIS AVAILIBLE: id=%d parent=%d idx=%d cur_idx=%d\n", p->id, p->parent, p->idx, p->cur_idx);
-    return (p->id == -1 || p->id == id) && (p->parent == -1 || p->parent == p->idx);
+    return (p->id == -1 || p->id == id);
 }
 
 int page_is_empty(Page* p) {
@@ -255,7 +255,7 @@ int page_is_empty(Page* p) {
 }
 
 int page_not_owned(Page *p) {
-    return (p->parent == -1);
+    return (p->id == -1);
 }
 
 void init_page(Page *p, int id, int parent, int idx) {
@@ -279,10 +279,10 @@ int find_empty_page(int start){
     return -1;
 }
 
-int find_empty_swapfile_page() {
+int find_empty_swapfile_page(int start) {
     printf("\nlooking for empty swapfile page\n");
 
-    int i = NUM_PAGES;
+    int i = start;
     for (; i < NUM_PAGES + NUM_SWAPFILE_PAGES; i++) {
         Page * p = &MDATA[i];
         if (page_not_owned(p)){

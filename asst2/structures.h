@@ -17,7 +17,7 @@ typedef struct Page_{
 } Page;
 
 int is_multipage_malloc(Page *p);
-int find_empty_swapfile_page();
+int find_empty_swapfile_page(int start);
 int find_empty_page(int start);
 void init_page(Page *p, int id, int parent, int idx);
 int page_not_owned(Page *p);
