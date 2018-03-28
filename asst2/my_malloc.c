@@ -260,7 +260,6 @@ void myfree(void * ptr, const char * file, int line, int flag) {
 
     if (page_num < 0 || page_num > NUM_PAGES) {
         printf("\nERROR: Invalid pointer given to free. %s:%d\n", file, line);
-        exit(1);
     }
     Page *p = &MDATA[page_num];
 
