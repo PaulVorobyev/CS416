@@ -7,6 +7,7 @@
 /* Globals */
 extern int is_initialized;
 extern FILE *swapfile;
+extern int mallocing;
 
 /* Misc */
 
@@ -22,13 +23,17 @@ void load_pages(int id) {
     if(id >= PAGETABLE_LEN){
         return;
     }
+
     PTE *cur = PAGETABLE[id];
     while (cur) {
-        if (cur->page_index != cur->page_loc) {
+        if (cur->in_swap) {
+            swap_pages_swapfile(cur->page_index, NUM_PAGES + cur->page_loc);
+        } else if (cur->page_index != cur->page_loc) {
             printf("PAGE #%d NOT IN PROPER SPOT FOR THREAD #%d", cur->page_index, id);
             swap_pages(cur->page_index, cur->page_loc);
         }
 
+        cur->in_swap = 0;
         single_chmod(cur->page_index, 0);
         cur = cur->next;
     }
@@ -57,12 +62,6 @@ int find_page(int id, int size) {
     for (i = start; i < end; i++) {
         printf("\nSINGLE MALLOC SEARCHING PAGE#%d FOR THREAD#%d\n", i, id);
         Page *cur = &MDATA[i];
-
-        // cant use multipage malloc'd page
-        /*if (is_multipage_malloc(cur)) {
-            printf("\nCANT USE PAGE %d, PART OF MULTIPAGE\n", i);
-            continue;
-        }*/
 
         // if page belongs to someone else, we cant use it, so swap it out
         if (!is_availible_page(cur, id)){
@@ -111,13 +110,6 @@ int find_pages(int id, int req_pages, int size) {
             }
 
             Page *cur = &MDATA[i + j];
-
-            /* cant use multipage malloc'd page
-            if (is_multipage_malloc(cur)) {
-                printf("\nCANT USE PAGE %d, PART OF MULTIPAGE\n", i + j);
-                all_free = 0;
-                break;
-            }*/
 
             // if its someone else's, and we cant move it or swap, give up
             if (!is_availible_page(cur, id) && (find_empty_page(i+j) == -1)) {
@@ -222,7 +214,8 @@ void *multi_page_malloc(int req_pages, int size, int id) {
 }
 
 void * mymalloc(size_t size, const char * file, int line, int flag) {
-    disableAlarm();
+    int was_mallocing = mallocing;
+    mallocing = 1;
 
     if ((int)size <= 0){
         // fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line);
@@ -254,12 +247,13 @@ void * mymalloc(size_t size, const char * file, int line, int flag) {
         setAlarm();
     }
 
+    if (!was_mallocing) mallocing = 0;
     return data;
 }
 
 void myfree(void * ptr, const char * file, int line, int flag) {
-    disableAlarm();
-    set_in_lib(1);
+    int was_mallocing = mallocing;
+    mallocing = 1;
 
     intptr_t offset = (intptr_t)ptr - (intptr_t)((void*) allmem);
     int page_num = offset / PAGE_SIZE;
@@ -269,8 +263,8 @@ void myfree(void * ptr, const char * file, int line, int flag) {
         printf("ERROR: Invalid pointer given to free. %s:%d", file, line);
         exit(1);
     }
-
     Page *p = &MDATA[page_num];
+
     Entry *e = find_mementry_for_data(p, ptr);
     //printf("free size: %d\n", (int)e->size);
 
@@ -310,6 +304,7 @@ void myfree(void * ptr, const char * file, int line, int flag) {
         printf("\nFREE SET ALARM\n");
         setAlarm();
     }
-    set_in_lib(0);
+
+    if (!was_mallocing) mallocing = 0;
 }
 

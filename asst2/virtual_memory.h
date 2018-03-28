@@ -52,6 +52,7 @@
 extern char *allmem;
 extern FILE *swapfile;
 extern int is_initialized;
+extern int mallocing;
 
 /* Prototypes */
 int get_id(int flag);

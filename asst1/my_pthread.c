@@ -40,6 +40,7 @@ static sched * scheduler = NULL;
 int nextMutexId = 0; // id of next mutex to be created
 int timesSwitched = 0; // TODO: debug
 int in_lib = 0; // 1 = we r in scheduling (checked by malloc)
+extern int mallocing;
 
 /* Macros */
 
@@ -138,8 +139,8 @@ void set_in_lib(int x) {
 void alrm_handler(int signo) {
     disableAlarm();
     
-    if (in_lib) {
-        printf("WERE IN LIB, JUST IGNORE TIMER");
+    if (mallocing) {
+        printf("WERE MALLOCING, JUST IGNORE TIMER");
         return;
     }
 

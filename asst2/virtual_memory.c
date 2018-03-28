@@ -6,6 +6,7 @@
 char *allmem;
 FILE *swapfile = NULL;
 int is_initialized = 0;
+int mallocing = 0;
 
 /* colors for printing */
 #define ANSI_COLOR_RED     "\x1b[31m"

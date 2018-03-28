@@ -333,6 +333,8 @@ int main(int argc, char* argv[]) {
     malloc(5100);
 
     pthread_create(&t, NULL, &foo, NULL);
+    pthread_join(t, NULL);
+    malloc(5);
 
     printf("AFTER 9\n");
 

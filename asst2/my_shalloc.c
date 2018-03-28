@@ -6,6 +6,7 @@
 #include "../asst1/my_pthread_t.h"
 
 extern int is_initialized;
+extern int mallocing;
 
 int find_page_shalloc(int size) {
     int i = SHALLOC_START_PAGE;
@@ -110,8 +111,8 @@ void *multi_page_shalloc(int req_pages, int size) {
 }
 
 void *shalloc(size_t size) {
-    disableAlarm();
-    /* set_in_lib(1); */
+    int was_mallocing = mallocing;
+    mallocing = 1;
 
     if ((int)size <= 0){
         // fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line);
@@ -144,7 +145,7 @@ void *shalloc(size_t size) {
         setAlarm();
     }
 
-    /* set_in_lib(0); */
+    if (!was_mallocing) mallocing = 0;
     return data;
 }
 
