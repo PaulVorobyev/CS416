@@ -10,3 +10,5 @@ test
 benchmark
 Benchmark/
 swapfile
+output
+*.tgz

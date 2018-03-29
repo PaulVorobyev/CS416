@@ -116,6 +116,11 @@ void *shalloc(size_t size) {
     int was_mallocing = mallocing;
     mallocing = 1;
 
+    if (is_sched_init()) {
+        printf("\nMALLOC DISABLE ALARM\n");
+        disableAlarm();
+    }
+
     if ((int)size <= 0){
         // fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line);
         return NULL;
@@ -139,10 +144,10 @@ void *shalloc(size_t size) {
     void *data = (req_pages == 1) ? single_page_shalloc(size)
         : multi_page_shalloc(req_pages, size);
 
-    print_mem(THREADREQ);
-    print_pagetable();
+    //print_mem(THREADREQ);
+    //print_pagetable();
 
-    if (is_sched_init() && !is_in_lib()) {
+    if (is_sched_init()) {
         printf("\nMALLOC SET ALARM\n");
         setAlarm();
     }

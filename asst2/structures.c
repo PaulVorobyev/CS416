@@ -232,7 +232,7 @@ void my_chmod(int id, int protect) {
         return;
     }
 
-    printf("MY_CHMOD: THREAD#%d IS IN PAGETABLE%d\n", id, PAGETABLE_LEN);
+    //printf("MY_CHMOD: THREAD#%d IS IN PAGETABLE%d\n", id, PAGETABLE_LEN);
     // take the tcb_id and protect flag (1 for change all pages to PROT_NONE, 0 for inverse)
     PTE *cur = PAGETABLE[id];
     while (cur){
@@ -247,7 +247,7 @@ void my_chmod(int id, int protect) {
 
 void single_chmod(int idx, int protect) {
             protect = 0;
-            printf("%sing page with idx %d for thread #%d\n", protect ? "protect" : "unprotect", idx,  get_curr_tcb_id());
+            //printf("%sing page with idx %d for thread #%d\n", protect ? "protect" : "unprotect", idx,  get_curr_tcb_id());
     mprotect(GET_PAGE_ADDRESS(idx), PAGE_SIZE, protect ? PROT_NONE : PROT_READ|PROT_WRITE); 
 }
 
