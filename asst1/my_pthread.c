@@ -6,6 +6,7 @@
 // username of iLab: ooe4, jl1806, pv149
 // iLab Server: python
 
+#define SCHED
 #include "my_pthread_t.h"
 #include <unistd.h>
 #include <sys/syscall.h>
@@ -14,9 +15,8 @@
 #include <sys/ucontext.h>
 #include <stdlib.h>
 #include "data_structure.h"
-#include "scheduler.h"
 
-#include "../asst2/my_malloc.h"
+#include "../asst2/virtual_memory.h"
 
 /* Constants */
 
@@ -25,9 +25,10 @@
 // scale factor for time difference between priority levels
 #define ALARM_TIME_DELTA 25
 // alarm time for highest priority
-#define ALARM_BASE_TIME 200
+#define ALARM_BASE_TIME 700
 // bytes to allocate for thread stack
-#define MEM 64000
+//#define MEM 64000
+#define MEM (SIGSTKSZ - 60)
 // number of cycles to bump old jobs
 #define BUMP_CYCLES 30
 // percentage of priority levels to bump
@@ -38,23 +39,38 @@
 static sched * scheduler = NULL;
 int nextMutexId = 0; // id of next mutex to be created
 int timesSwitched = 0; // TODO: debug
+int in_lib = 0; // 1 = we r in scheduling (checked by malloc)
+extern int mallocing;
 
 /* Macros */
 
 // start alarm and swap next thread
 #define SWAP_NEXT_THREAD(old, next) {\
+    printf("SWAP NEXT THREAD %d with %d", old->id, next->id);\
     scheduler->curr = next;\
+    my_chmod(old->id, 1);\
+    my_chmod(next->id, 0);\
+    load_pages(next->id);\
+    in_lib = 0;\
+    printf("\nPTHREAD SET ALARM\n");\
     setAlarm();\
     swapcontext(&old->context, &next->context);}\
 
 // start alarm and set next thread
 #define SET_NEXT_THREAD(next) {\
     scheduler->curr = next;\
+    my_chmod(next->id, 0);\
+    load_pages(next->id);\
+    in_lib = 0;\
+    printf("\nPTHREAD SET ALARM\n");\
     setAlarm();\
     setcontext(&next->context);}\
 
 // set alarm and continue running current thread
-#define CONTINUE_CURRENT_THREAD setAlarm()
+#define CONTINUE_CURRENT_THREAD {\
+    in_lib = 0;\
+    printf("\nPTHREAD SET ALARM\n");\
+    setAlarm();}\
 
 /* Priority Inversion Check */
 
@@ -85,7 +101,8 @@ void priority_inversion_check() {
 
 /* Alarm-related functions */
 
-static void setAlarm() {
+void setAlarm() {
+    printf("\nSET ALARM\n");
     if (scheduler == NULL) {
         //puts("Error: scheduler not initialized");
         exit(1);
@@ -97,12 +114,40 @@ static void setAlarm() {
     ualarm(interval, interval);
 }
 
-static void disableAlarm() {
+void disableAlarm() {
+    printf("\nDISABLE ALARM\n");
+
     ualarm(0, 0);
+}
+
+int get_curr_tcb_id(){
+    return (scheduler && scheduler->curr) ? scheduler->curr->id : -1;
+}
+
+int is_sched_init() {
+    return (scheduler != NULL && (scheduler->curr));
+}
+
+int is_in_lib() {
+    return in_lib;
+}
+
+void set_in_lib(int x) {
+    in_lib = x;
 }
 
 void alrm_handler(int signo) {
     disableAlarm();
+    
+    if (mallocing) {
+        printf("WERE MALLOCING, JUST IGNORE TIMER");
+        return;
+    }
+
+    printf("\nTIMER WENT OFF!\n");
+    // if we are disabling the alarm we must be in the library, right?
+    in_lib = 1;
+
     timesSwitched += 1;
     //printf("SWITCH %d\n", timesSwitched);
 
@@ -146,6 +191,9 @@ void thread_runner(void *(*function)(void*), void *arg) {
 int my_pthread_create(my_pthread_t *id, const pthread_attr_t *attr,
 		void *(*function)(void*), void *arg) {
     disableAlarm();
+    // if we are disabling the alarm we must be in the library, right?
+    in_lib = 1;
+
 
     //puts("CREATE!"); // TODO: debug
 
@@ -162,6 +210,7 @@ int my_pthread_create(my_pthread_t *id, const pthread_attr_t *attr,
     // enqueue old thread
     add_job((void *) old, scheduler->m_queue);
     
+
     // create new thread
     tcb * t = tcb_init();
     getcontext(&(t->context));
@@ -189,6 +238,10 @@ int my_pthread_yield() {
 /* terminate a thread */
 void my_pthread_exit(void *value_ptr) {
     disableAlarm();
+    printf("ENTER EXIT()\n");
+    // if we are disabling the alarm we must be in the library, right?
+    in_lib = 1;
+
 
     //puts("ENTER EXIT!"); //TODO: debug
 
@@ -214,6 +267,9 @@ void my_pthread_exit(void *value_ptr) {
 /* wait for thread termination */
 int my_pthread_join(my_pthread_t thread, void **value_ptr) {
     disableAlarm();
+    // if we are disabling the alarm we must be in the library, right?
+    in_lib = 1;
+
 
     tcb *targetThread = (tcb*) hash_find(scheduler->terminated, thread);
 
@@ -245,6 +301,9 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
     // on is finished
     
     disableAlarm();
+    // if we are disabling the alarm we must be in the library, right?
+    in_lib = 1;
+
 
     targetThread = (tcb*) hash_find(scheduler->terminated, thread);
 
@@ -272,6 +331,9 @@ int my_pthread_mutex_init(my_pthread_mutex_t *mutex, const pthread_mutexattr_t *
 /* aquire the mutex lock */
 int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
     disableAlarm();
+    // if we are disabling the alarm we must be in the library, right?
+    in_lib = 1;
+
 
     if (!mutex->locked) {
         mutex->locked = 1;
@@ -299,6 +361,9 @@ int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
     // we have been swapped in again because the mutex is now unlocked
     
     disableAlarm();
+    // if we are disabling the alarm we must be in the library, right?
+    in_lib = 1;
+
     
     mutex->locked = 1;
     hash_insert(scheduler->lockOwners, (void*) mutex, scheduler->curr->id);
@@ -310,6 +375,9 @@ int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
 /* release the mutex lock */
 int my_pthread_mutex_unlock(my_pthread_mutex_t *mutex) {
     disableAlarm();
+    // if we are disabling the alarm we must be in the library, right?
+    in_lib = 1;
+
 
     //printf("MUTEX%d UNLOCKED!\n", mutex->id + 1);
 
@@ -336,6 +404,9 @@ int my_pthread_mutex_unlock(my_pthread_mutex_t *mutex) {
 /* destroy the mutex */
 int my_pthread_mutex_destroy(my_pthread_mutex_t *mutex) {
     disableAlarm();
+    // if we are disabling the alarm we must be in the library, right?
+    in_lib = 1;
+
     CONTINUE_CURRENT_THREAD;
 	return 0;
 };
