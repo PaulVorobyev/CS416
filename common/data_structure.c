@@ -248,3 +248,32 @@ void *m_heap_delete(m_heap *h) {
     return data;
 }
 
+/* Arraylist Implementation */
+
+array_list *array_list_init(int initial_size) {
+    array_list *a = malloc(sizeof(array_list));
+    *a = (array_list) {
+        .size = 0,
+        .capacity = initial_size,
+        .array = malloc(sizeof(void*) * initial_size) };
+
+    return a;
+}
+
+int array_list_is_empty(array_list *a) {
+    return a->size == 0;
+}
+
+void array_list_add(array_list *a, void *item) {
+    if (a->size == a->capacity) {
+        a->capacity *= 2;
+        a->array = realloc(a->array, sizeof(void*) * a->capacity);
+    }
+
+    a->array[a->size++] = item;
+}
+
+void *array_list_get(array_list *a, int idx) {
+    return ((idx > 0) && (idx < a->size)) ? a->array[idx] : NULL;
+}
+

@@ -1,4 +1,4 @@
-#include "data_structure.h"
+#include "../common/data_structure.h"
 #include <sys/ucontext.h>
 
 // Thread Control Block

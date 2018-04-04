@@ -5,9 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "my_pthread_t.h"
-#include "../common/data_structure.h"
 
-#include "../asst2/my_malloc.h"
+#include "../asst2/virtual_memory.h"
 
 /* Globals */
 
@@ -19,11 +18,14 @@ my_pthread_mutex_t mutex2;
 void *foo() {
     int i = 0;
     for (i = 0; i < 2000; i++) {
-        printf("foo! %d\n", i);
+        //printf("foo! %d\n", i);
     }
 
-    int * result = (int*) malloc(sizeof(int));
-    *result = 1;
+    int * result = (int*) malloc(4500);
+    if (result != NULL) {
+        *result = 1;
+        free((void*)result);
+    }
     return (void*) result;
 }
 
@@ -34,7 +36,11 @@ void *bar() {
     }
 
     int * result = (int*) malloc(sizeof(int));
-    *result = 2;
+    if (!result) {
+        printf("\nOUT OF MEMORY\n");
+    } else {
+        *result = 2;
+    }
     return (void*) result;
 }
 
@@ -202,8 +208,8 @@ void test_join(){
     pthread_join(b, &b_ret);
     pthread_join(b2, &b2_ret);
 
-    printf("Threads returned: %d, %d, %d\n", (*(int*)f_ret),
-        (*(int*)b_ret), (*(int*)b2_ret));
+    /* printf("Threads returned: %d, %d, %d\n", (*(int*)f_ret), */
+    /*     (*(int*)b_ret), (*(int*)b2_ret)); */
 
     puts("END TEST JOIN");
 }
@@ -241,14 +247,95 @@ void test_priority_inversion(){
     puts("END TEST PRIORITY INVERSION");
 }
 
-int main(int argc, char* argv[]) {
-    test_m_queue();
+void test_malloc_basic() {
+    puts("\nSTART TEST BASIC MALLOC");
     
+    int i;
+    void *a = malloc(10);
+    void *b = malloc(10);
+    void *c = malloc(10);
+    void *d = malloc(10);
+    free(a);
+    free(b);
+    free(c);
+    free(d);
+
+    void *e = malloc(5500);
+    //free(e);
+
+    puts("END TEST BASIC MALLOC");
+}
+
+void virt_mem_test(){
+    // phase b test
+    printf("Phase B\n");
+    void *a = malloc(5500);
+    void *b = malloc(5500);
+    void *c = malloc(5500);
+    free(a);
+    free(b);
+    free(c);
+
+    // phase c test
+
+
+    // phase d test
+    printf("Phase D\n");
+    void * d = shalloc(100);
+    void * e = shalloc(100);
+    void * f = shalloc(5500);
+    free(d);
+    free(e);
+    free(f);
+
+    // test accessing memory
+    printf("Phase test access\n");
+    int * g = (int *) (malloc(sizeof(int) * 10));
+    int i = 0;
+    for(; i < 10; i++){
+        g[i] = 10;
+    }
+}
+
+int main(int argc, char* argv[]) {
+	my_pthread_t t;
+
+	/*my_pthread_t t;
+    pthread_create(&t, NULL, &foo, NULL);
+    pthread_join(t, NULL);
+    test_m_queue();
     test_hash();
     test_queue();
     test_m_heap();
     test_join();
     test_mutex();
     test_priority_inversion();
-    
+
+    test_malloc_basic();
+    printf("EXIT\n");
+
+    printf("BEFORE 9\n");
+
+    malloc(9);*/
+
+
+    pthread_create(&t, NULL, &foo, NULL);
+
+    malloc(10000);
+    malloc(10000);
+    malloc(10000);
+    malloc(10000);
+    malloc(10000);
+    malloc(10000);
+    malloc(6000);
+
+    malloc(4000);
+    malloc(5100);
+
+    pthread_create(&t, NULL, &foo, NULL);
+    pthread_join(t, NULL);
+    malloc(5);
+
+    printf("AFTER 9\n");
+
 }

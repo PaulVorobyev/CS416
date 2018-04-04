@@ -1,171 +1,328 @@
-#include <stdlib.h>
-#include <stdio.h>
+#include <string.h>
+
 #include "my_malloc.h"
-#include "data_structure.h"
+#include "../asst1/my_pthread_t.h"
+#include "./virtual_memory.h"
 
-//no semicolon after #define
-#define ARRAYSIZE 8388608
-#define MEMSIZE sizeof(struct MemEntry_)
-static char ALLMEM[ARRAYSIZE];
-static int initialize = 0;
+/* Globals */
+extern int is_initialized;
+extern FILE *swapfile;
+extern int mallocing;
 
-//function called to add another Mementry if space ran out in char arr
-char *expand(MemEntry last, size_t x, char *file, size_t line){
-    MemEntry i;
-    char *tmp = (char *)sbrk(x + MEMSIZE);
-    if(!tmp){
-        /*fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line);*/
-        return 0;
+/* Misc */
+
+int my_ceil(double num){
+    if (num == (int)num) {
+        return (int)num;
     }
-    MemEntry ret = (MemEntry)tmp;
-    last->next = ret;
-
-    ret->flag = 1;
-    ret->size = x;
-    ret->next = NULL;
-    /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); */
-    return (char *)ret + MEMSIZE;
+    return (int)num + 1;
 }
 
-
-
-void * mymalloc(size_t size, const char * file, int line, int flag) {
-    hash_table * h = hash_init();
-    size_t x = size;
-    if((int)x <= 0){
-        /*fprintf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line); */
-        return 0;
-    }
-    //printf("\n\nTEST\n");
-    MemEntry i; 
-    MemEntry root = (MemEntry)ALLMEM;
-    int newSize = 0;
-
-    if(!initialize){
-        root->flag = 0; //0 means free
-        root->size = ARRAYSIZE-MEMSIZE;
-        root->next = NULL;
-        initialize = 1;
-        //printf("peaches\n"); 
+void load_pages(int id) {
+    //printf("LOAD PAGES %d\n", id);
+    if(id >= PAGETABLE_LEN){
+        return;
     }
 
-    if (root->flag == 0 && root->size+MEMSIZE > x){
-        //printf("hi\n"); 
-        newSize = root->size-MEMSIZE-x;
-        root->size = x;
-        root->flag = 1;
-        MemEntry newNode =(MemEntry)((char*)root+MEMSIZE+x);
-        newNode->size = newSize;
-        newNode->flag = 0;
-        newNode->next = root->next;
-        root->next = newNode;
-        //printf("rootsize: %d    nodesize: %d    start: %d   end: %d    retptr: %d\n", root->size, newNode->size, root, (int)(root+1) + x, (int)root+MEMSIZE); 
-        /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); */
-        return (char*)root + MEMSIZE;
-    }
-
-    //printf("pineapple\n"); 
-
-    if (root->flag == 0 && root->size == x){
-        root->size = x;
-        root->flag = 1;
-        //printf("peanuts\n"); 
-        /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); */
-        return (char*)root + MEMSIZE;
-    }
-
-    //printf("kiwi\n"); 
-
-    for (i = root; ; i=i->next){
-        //printf("kumquat: %d    wanted: %d     size: %d\n", (int)i,x, i->size); 
-
-        if(x > i->size && !i->next && i->flag == 0)
-            return expand(i, x, file, line);
-
-        if (i->flag == 0 && i->size+MEMSIZE > x){
-            //printf("starfruit\n"); 
-            newSize = i->size-MEMSIZE-x;
-            i->size = x;
-            i->flag = 1;
-            MemEntry newNode = (MemEntry)((char*)i+MEMSIZE+x);
-            //printf("newsize: %d\n", newSize);
-            newNode->size = newSize;
-            newNode->flag = 0;
-            i->next = newNode;
-            newNode->next = NULL;
-            //printf("return: %d\n", (int)i+MEMSIZE);
-            /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); */
-            return (char*)i + MEMSIZE;
+    PTE *cur = PAGETABLE[id];
+    while (cur) {
+        if (cur->in_swap) {
+            swap_pages_swapfile(cur->page_index, NUM_PAGES + cur->page_loc);
+        } else if (cur->page_index != cur->page_loc) {
+            //printf("PAGE #%d NOT IN PROPER SPOT FOR THREAD #%d", cur->page_index, id);
+            swap_pages(cur->page_index, cur->page_loc);
         }
 
-        if (i->flag == 0 && i->size == x){
-            //printf("lemons\n"); 
-            i->size = x;
-            i->flag = 1;
-            /*if(strcmp(file, "malloc.c") != 0)printf("Success! [%s:%d] successfully malloced %d bytes\n", file, line, (int)x); */
-            return (char*)i + MEMSIZE;
-        }
-    } 
-    return 0;
+        single_chmod(cur->page_index, 0);
+        cur = cur->next;
+    }
 }
 
-void myfree(void * ptr, const char * file, int line, int flag) {
-    MemEntry i, root;   
-    root = (MemEntry)ALLMEM;
-    //input = (MemEntry)((char*)ptr-MEMSIZE);
-    if (!ptr){
-        fprintf(stderr, "Error! Ptr does not exist in [%s:%d]\n", file, line); 
-        return;
-    }
-    //if address DOES NOT exist within the memory block
-    if (&ptr <= &ALLMEM+MEMSIZE && &ptr >= &ALLMEM+(ARRAYSIZE-MEMSIZE)){
-        fprintf(stderr, "Error! Ptr in [%s:%d] is not contained in memory\n", file, line);
-        return;
-    }
-    //if input + ___
-    for(i = root; ; i = i->next){
-        //printf("i_size: %d\n", i->size); 
-        if(i->next == NULL && i+1 != ptr){
-            fprintf(stderr, "Error [%s:%d] had an error in freeing\n", file, line);
-            return;
+int check_loaded_pages(int id) {
+    //printf("CHECK LOAD PAGES %d\n", id);
+    PTE *cur = PAGETABLE[id];
+
+    while (cur) {
+        if ((cur->in_swap) || (cur->page_index != cur->page_loc)) {
+            return 0;
         }
-        if(i+1 == ptr){
-            //printf("guava\n"); 
-            break;
+
+        cur = cur->next;
+    }
+
+    return 1;
+}
+
+int find_page(int id, int size) {
+    int i = 0;
+    int start = id ? 0 : SYS_PAGE_START;
+    int end = id ? THREAD_NUM_PAGES : (NUM_PAGES - MDATA_NUM_PAGES);
+
+    for (i = start; i < end; i++) {
+        //printf("\nSINGLE MALLOC SEARCHING PAGE#%d FOR THREAD#%d\n", i, id);
+        Page *cur = &MDATA[i];
+
+        // if page belongs to someone else, we cant use it, so swap it out
+        if (!is_availible_page(cur, id)){
+            //printf("\nWE ARE GONNA MOVE PAGE %d for %d\n", i, id);
+            int empty = find_empty_page(0);
+
+            if (empty != -1) {
+                swap_pages (i, empty);
+                single_chmod(i, 0);
+            } else {
+                int empty_swap = find_empty_swapfile_page(2048);
+
+                if (empty_swap == -1) {
+                    return -1;
+                }
+                
+                swap_pages_swapfile(i, empty_swap);
+            }
+        }
+
+        if (find_mementry(cur->front, size)) {
+            //printf("\nFOUND A MEMENTRY AT INDEX %d for %d\n", i, id);
+            return i;
         }
     }
 
-    //if ptr address matches with a MemEntry address in array
-    if(i->flag == 1){
-        i->flag = 0;
-    }else{
-        fprintf(stderr, "Error! Pointer at [%s:%d] is already free.\n", file, line); 
-        return;
-    }
+    return -1;
+}
 
-    //combining multiple free blocks
-    i = root;
-    do{
-        //printf("flag: %d       before merge: %d      nxt: %d\n",i->flag,  i->size, i->next->size);
-        if(i->flag == 0 && i->next->flag == 0){
-            //add the size of the next MemEntry to the current and "deletes" the next MemEntry to allow for rewritinig
-            i->size += i->next->size + MEMSIZE;
-            //if more than 2 MemEntries
-            if(i->next->next){
-                //printf("more than 2\n");
-                i->next = i->next->next;
-                i = root; //set i back to root to check thru LL again
-                continue;
-            }else{
-                //printf("less than 2\n"); 
-                i->next = NULL;
+int find_pages(int id, int req_pages, int size) {
+    int i = 0;
+    int j = 0;
+
+    int start = id ? 0 : SYS_PAGE_START;
+    int end = id ? THREAD_NUM_PAGES : (NUM_PAGES - MDATA_NUM_PAGES);
+        
+    for (i = start; i < end; i++) {
+        //printf("MULTI MALLOC SEARCHING PAGE#%d FOR THREAD#%d", i, id);
+        int all_free = 1;
+        int prev_empty_swap = 2047;
+
+        for (j = 0; j < req_pages; j++) {
+            if ((i + j) >= end) {
+                //printf("\nOUT OF BOUNDS\n");
+                return -1;
+            }
+
+            Page *cur = &MDATA[i + j];
+
+            // if its someone else's, and we cant move it or swap, give up
+            if (!is_availible_page(cur, id) && (find_empty_page(i+j) == -1)) {
+                if ((prev_empty_swap = find_empty_swapfile_page(prev_empty_swap + 1)) != -1) {
+                    continue;
+                }
+
+                all_free = 0;
+                break;
+            }
+
+            // all req_pages must be full and free
+            if (!page_is_empty(cur)) {
+                all_free = 0;
                 break;
             }
         }
-        i = i->next;
-    }while(i->next);
-    //printf("after merge: %d\n", i->size);
 
-    /*printf("Success! [%s:%d] successfully freed\n", file, line); */
-    return;
+        if (all_free) {
+            int hack = 2047;
+            // do whatever swapping/shuffling is needed and return
+            // the index of the first page in the group
+            for (j = 0; j < req_pages; j++) {
+                Page *cur = &MDATA[i + j];
+
+                if (!is_availible_page(cur, id)){
+                    //printf("\nWE ARE GONNA TRY TO MOVE PAGE %d for %d\n", i+j, id);
+                    int empty = find_empty_page(i + j);
+                    if (empty != -1) {
+                        swap_pages (i + j, empty);
+                        single_chmod(i+j, 0);
+                    } else {
+                        swap_pages_swapfile(i+j, hack = find_empty_swapfile_page(hack + 1));
+                    }
+                }
+            }
+
+            return i;
+        }
+    }
+
+    return -1;
 }
+
+void *single_page_malloc(int size, int id) {
+    //printf("single_page_malloc() for %d\n", id);
+
+    int idx = find_page(id, size);
+
+    if (idx == -1) {
+        //printf("CANT GET A PAGE FOR %d", id);
+        return NULL;
+    }
+
+    //printf("found an entry\n");
+
+    Page *p = &MDATA[idx];
+
+    init_page(p, id, idx, idx);
+
+    Entry *e = find_mementry(p->front, size);
+
+    if (can_be_split(e, size)) split(e, size);
+    e->is_free = 0;
+
+    // set PTE
+    if (id != 0 && !has_PTE(id, idx)) {
+        add_PTE(id, idx, idx);
+    }
+
+    return (void*) (e + 1);
+}
+
+void *multi_page_malloc(int req_pages, int size, int id) {
+    int idx = find_pages(id, req_pages, size);
+
+    if (idx == -1) return NULL;
+
+    int i = 0;
+    for (; i < req_pages; i++) {
+        Page *cur = &MDATA[idx + i];
+
+        if (i == 0) {
+            init_page(cur, id, idx, idx);
+            cur->front->size = size;
+        } else {
+            init_page(cur, id, idx, idx + i);
+        }
+        
+        // mark as taken
+        cur->front->is_free = 0;
+
+        // set PTE
+        if (id != 0 && !has_PTE(id, idx + i)) {
+            add_PTE(id, idx + i, idx + i);
+        }
+    }
+
+    //printf("multimalloc giving page %d for %d for %d", idx, id, req_pages);
+    return (void*) (MDATA[idx].front + 1);
+}
+
+void * mymalloc(size_t size, const char * file, int line, int flag) {
+    int was_mallocing = mallocing;
+    mallocing = 1;
+
+    if (is_sched_init() && !is_in_lib() && flag != LIBRARYREQ) {
+        //printf("\nMALLOC DISABLE ALARM\n");
+        disableAlarm();
+    }
+
+    if ((int)size <= 0){
+        // f//printf(stderr, "Error! [%s:%d] tried to malloc a negative amount\n", file, line);
+        return NULL;
+    }
+
+    if (!is_initialized) {
+        mem_init();
+        is_initialized = 1;
+    }
+
+    int size_with_entry = size + sizeof(Entry);
+    int id = get_id(flag);
+
+    //printf("\n -------------- Start Malloc for thread #%d for size %d at %s:%d--------------- \n", id, (int)size, file, line);
+
+    // the total number of requested pages
+    int req_pages = my_ceil((double)size_with_entry / (double)PAGE_SIZE);
+
+    void *data = (req_pages == 1) ? single_page_malloc(size, id)
+        : multi_page_malloc(req_pages, size, id);
+
+    //print_mem(flag);
+    //print_swapfile();
+    print_pagetable();
+
+    if (is_sched_init() && !is_in_lib() && flag != LIBRARYREQ) {
+        //printf("\nMALLOC SET ALARM\n");
+        setAlarm();
+    }
+
+    if (!was_mallocing) mallocing = 0;
+    return data;
+}
+
+void myfree(void * ptr, const char * file, int line, int flag) {
+    int was_mallocing = mallocing;
+    mallocing = 1;
+    if (is_sched_init() && !is_in_lib() && flag != LIBRARYREQ) {
+        //printf("\nMALLOC DISABLE ALARM\n");
+        disableAlarm();
+    }
+
+    intptr_t offset = (intptr_t)ptr - (intptr_t)((void*) allmem);
+    int page_num = offset / PAGE_SIZE;
+    int id = get_id(flag);
+    //printf("~~~~~~~~~~~~ Freeing page #%d as %d~~~~~~~~~~~~`\n", page_num, id);
+
+    if (page_num < 0 || page_num > NUM_PAGES) {
+        //printf("\nERROR: Invalid pointer given to free. %s:%d\n", file, line);
+    }
+    Page *p = &MDATA[page_num];
+
+    Entry *e = find_mementry_for_data(p, ptr);
+    ////printf("free size: %d\n", (int)e->size);
+
+    if (!e) {
+        //printf("\nERROR: Invalid pointer given to free. %s:%d\n", file, line);
+    }
+
+    if (e->is_free) {
+        //printf("\nERROR: Attempting to double free. %s:%d\n", file, line);
+    }
+
+    if (is_multipage_malloc(p)) {
+        int parent_id = p->id;
+        int parent_idx = p->idx;
+        Page *cur_p = p;
+        while (cur_p->id == parent_id && cur_p->parent == parent_idx) {
+            cur_p->is_free = 1;
+            cur_p->parent = cur_p->idx;
+            cur_p->front->is_free = 1;
+            cur_p->front->size = MAX_ENTRY_SIZE;
+            
+            if (id != 0 && page_is_empty(cur_p)) {
+                int cur_idx = cur_p->idx;
+                //printf("bruh %d %d", id, (int)cur_p->id);
+                clear_page(cur_p);
+                remove_PTE(id, cur_idx);
+            }
+
+            cur_p = cur_p->next;
+        }
+                //printf("bruh %d %d %d", id, (int)cur_p->id, MDATA[1].id);
+    } else {
+        e->is_free = 1;
+        Entry *prev = get_prev_entry(p, e);
+        coalesce(e, prev);
+
+        if (id != 0 && page_is_empty(p)) {
+            int idx = p->idx;
+            clear_page(p);
+            remove_PTE(id, idx);
+        }
+    }
+
+    //print_mem(get_id(flag));
+    //print_pagetable();
+
+    if (is_sched_init() && !is_in_lib() && flag != LIBRARYREQ) {
+        //printf("\nFREE SET ALARM\n");
+        setAlarm();
+    }
+
+    if (!was_mallocing) mallocing = 0;
+}
+

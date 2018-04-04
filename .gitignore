@@ -9,3 +9,6 @@ jobsim.dSYM/
 test
 benchmark
 Benchmark/
+swapfile
+output
+*.tgz
