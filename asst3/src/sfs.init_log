@@ -1,0 +1,19 @@
+
+sfs_init()
+    conn:
+    proto_major = 7
+    proto_minor = 22
+    async_read = 1
+    max_write = 131072
+    max_readahead = 131072
+    capable = 00000ffb
+    want = 00000010
+    context:
+    fuse = 0075c4a0
+    uid = 0
+    gid = 0
+    pid = 0
+    private_data = 0075c010
+    logfile = 0075c030
+    diskfile = /.freespace/ooe4/testfsfile
+    umask = 00000
