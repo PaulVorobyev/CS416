@@ -1,1 +1,1 @@
-fusermount -u /tmp/ooe4/mountdir
+fusermount -u /tmp/$USER/mountdir
