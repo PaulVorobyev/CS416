@@ -12,3 +12,6 @@ Benchmark/
 swapfile
 output
 *.tgz
+
+asst3/assignment3/*
+!asst3/assignment3/src/
