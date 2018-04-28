@@ -26,7 +26,13 @@
 struct sfs_state {
     FILE *logfile;
     char *diskfile;
+    FILE *disk;
 };
 #define SFS_DATA ((struct sfs_state *) fuse_get_context()->private_data)
+
+#define NUM_DATA_BLOCKS 31000
+#define MAX_FILES 200
+#define NUM_BLOCKS 31250
+// (1) superblock| (200) inodes| (31000) datablocks
 
 #endif

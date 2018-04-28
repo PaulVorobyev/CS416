@@ -50,9 +50,10 @@ void *sfs_init(struct fuse_conn_info *conn)
 {
     fprintf(stderr, "in bb-init\n");
     log_msg("\nsfs_init()\n");
-    
     log_conn(conn);
     log_fuse_context(fuse_get_context());
+
+
 
     return SFS_DATA;
 }
@@ -332,6 +333,9 @@ int main(int argc, char *argv[])
     argv[argc-2] = argv[argc-1];
     argv[argc-1] = NULL;
     argc--;
+
+    // save pointer to disk file
+    sfs_data->disk = fopen(sfs_data->diskfile, "w+");
     
     sfs_data->logfile = log_open();
     
