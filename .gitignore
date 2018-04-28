@@ -14,4 +14,6 @@ output
 *.tgz
 
 asst3/assignment3/*
-!asst3/assignment3/src/
+!asst3/assignment3/src/*.c
+!asst3/assignment3/src/*.h
+!asst3/assignment3/src/*.sh
