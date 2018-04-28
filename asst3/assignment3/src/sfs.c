@@ -29,6 +29,12 @@
 
 #include "log.h"
 
+int my_ceil(double num){
+    if (num == (int)num) {
+        return (int)num;
+    }
+    return (int)num + 1;
+}
 
 ///////////////////////////////////////////////////////////
 //
@@ -54,13 +60,13 @@ void *sfs_init(struct fuse_conn_info *conn)
     log_fuse_context(fuse_get_context());
 
     // init inode bitmap
-    SFS_DATA->inodes = calloc(sizeof(char) * MAX_INODES);
+    SFS_DATA->inodes = calloc(MAX_INODES, sizeof(char));
 
     // init datablock bitmap
     SFS_DATA->datablocks = malloc(sizeof(datablock_entry) * NUM_DATABLOCKS);
     int i = 0;
     for (; i < NUM_DATABLOCKS; i++) {
-        SFS_DATA->datablocks[i] = {
+        SFS_DATA->datablocks[i] = (datablock_entry) {
             .is_free = 0,
             .index = i,
             .next = NULL
@@ -72,16 +78,33 @@ void *sfs_init(struct fuse_conn_info *conn)
 
     // init superblock
     int superblocknum = 462;
-    int *buf = calloc(512);
-    buf* = superblocknum;
+    int *buf = calloc(1, 512);
+    *buf = superblocknum;
     block_write(0, (void*)buf);
 
-    int *newbuf = calloc(512);
-    block_read(0, newbuf);
-    printf("OUR SPECIAL NUMBER IS %d", *newbuf);
-
-
+    // init inodes
+    int inodes_per_block = 512 / sizeof(inode);
+    inode in = (inode) {
     
+    };
+    inode *inbuf = calloc(1, 512);
+    i = 0;
+    for (; i < inodes_per_block; i++) {
+        inbuf[i] = (inode) {
+            .st_ino = -1,   /* inode number */
+            .st_nlink = -1,  /* number of hard links TODO: wut*/
+            .st_size = 0,   /* total size, in bytes */
+            .st_blksize = 512, /* blocksize for file system I/O */
+            .filename = NULL,
+            .datablock_index = NULL
+        };
+    }
+    i = 0;
+    for (; i < my_ceil(MAX_INODES / inodes_per_block); i++) {
+        block_write(i + 1, inbuf);
+    }
+
+    log_msg("\nBRUHHHHHHH\n");
     return SFS_DATA;
 }
 

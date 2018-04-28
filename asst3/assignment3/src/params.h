@@ -23,13 +23,16 @@
 // maintain bbfs state in here
 #include <limits.h>
 #include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 /* USEFUL STUFF FOR SFS */
 
 typedef struct datablock_entry {
     char is_free;
     int index;
-    struct datablock_entry next;
+    struct datablock_entry *next;
 } datablock_entry;
 
 typedef struct _inode {
