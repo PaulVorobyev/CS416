@@ -53,8 +53,35 @@ void *sfs_init(struct fuse_conn_info *conn)
     log_conn(conn);
     log_fuse_context(fuse_get_context());
 
+    // init inode bitmap
+    SFS_DATA->inodes = calloc(sizeof(char) * MAX_INODES);
+
+    // init datablock bitmap
+    SFS_DATA->datablocks = malloc(sizeof(datablock_entry) * NUM_DATABLOCKS);
+    int i = 0;
+    for (; i < NUM_DATABLOCKS; i++) {
+        SFS_DATA->datablocks[i] = {
+            .is_free = 0,
+            .index = i,
+            .next = NULL
+        };
+    }
+
+    // open the disk
+    disk_open(SFS_DATA->diskfile);
+
+    // init superblock
+    int superblocknum = 462;
+    int *buf = calloc(512);
+    buf* = superblocknum;
+    block_write(0, (void*)buf);
+
+    int *newbuf = calloc(512);
+    block_read(0, newbuf);
+    printf("OUR SPECIAL NUMBER IS %d", *newbuf);
 
 
+    
     return SFS_DATA;
 }
 
@@ -334,9 +361,6 @@ int main(int argc, char *argv[])
     argv[argc-1] = NULL;
     argc--;
 
-    // save pointer to disk file
-    sfs_data->disk = fopen(sfs_data->diskfile, "w+");
-    
     sfs_data->logfile = log_open();
     
     // turn over control to fuse

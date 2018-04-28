@@ -23,15 +23,36 @@
 // maintain bbfs state in here
 #include <limits.h>
 #include <stdio.h>
+
+/* USEFUL STUFF FOR SFS */
+
+typedef struct datablock_entry {
+    char is_free;
+    int index;
+    struct datablock_entry next;
+} datablock_entry;
+
+typedef struct _inode {
+    ino_t     st_ino;     /* inode number */
+    nlink_t   st_nlink;   /* number of hard links */
+    off_t     st_size;    /* total size, in bytes */
+    blksize_t st_blksize; /* blocksize for file system I/O */
+    char *filename;
+    datablock_entry *datablock_index;
+} inode;
+
 struct sfs_state {
     FILE *logfile;
     char *diskfile;
     FILE *disk;
+    char *inodes;
+    datablock_entry *datablocks;
 };
+
 #define SFS_DATA ((struct sfs_state *) fuse_get_context()->private_data)
 
-#define NUM_DATA_BLOCKS 31000
-#define MAX_FILES 200
+#define NUM_DATABLOCKS 31000
+#define MAX_INODES 200
 #define NUM_BLOCKS 31250
 // (1) superblock| (200) inodes| (31000) datablocks
 

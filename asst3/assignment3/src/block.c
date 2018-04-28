@@ -68,25 +68,3 @@ int block_write(const int block_num, const void *buf)
     return retstat;
 }
 
-/* USEFUL STUFF FOR SFS */
-
-typedef struct _inode {
-    ino_t     st_ino;     /* inode number */
-    nlink_t   st_nlink;   /* number of hard links */
-    off_t     st_size;    /* total size, in bytes */
-    blksize_t st_blksize; /* blocksize for file system I/O */
-    char *filename;
-    int datablock_index;
-} inode;
-
-typedef struct datablock_entry {
-    char is_free;
-    int index;
-    struct datablock_entry next;
-} datablock_entry;
-
-typedef struct _bitmaps {
-    char *inodes;
-    datablock_entry* datablocks;
-} bitmaps;
-
