@@ -40,7 +40,7 @@ typedef struct _inode {
     nlink_t   st_nlink;   /* number of hard links */
     off_t     st_size;    /* total size, in bytes */
     blksize_t st_blksize; /* blocksize for file system I/O */
-    char *filename;
+    char *full_path;
     datablock_entry *datablock_index;
 } inode;
 
@@ -58,5 +58,10 @@ struct sfs_state {
 #define MAX_INODES 200
 #define NUM_BLOCKS 31250
 // (1) superblock| (200) inodes| (31000) datablocks
+
+#define BLOCK_SIZE 512
+#define INODES_PER_BLOCK (BLOCK_SIZE/sizeof(inode))
+#define NUM_INODE_BLOCKS ((MAX_INODES/INODES_PER_BLOCK)+1)
+
 
 #endif

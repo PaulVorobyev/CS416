@@ -95,12 +95,12 @@ void *sfs_init(struct fuse_conn_info *conn)
             .st_nlink = -1,  /* number of hard links TODO: wut*/
             .st_size = 0,   /* total size, in bytes */
             .st_blksize = 512, /* blocksize for file system I/O */
-            .filename = NULL,
+            .full_path = NULL,
             .datablock_index = NULL
         };
     }
     i = 0;
-    for (; i < my_ceil(MAX_INODES / inodes_per_block); i++) {
+    for (; i < NUM_INODE_BLOCKS; i++) {
         block_write(i + 1, inbuf);
     }
 
@@ -126,6 +126,29 @@ void sfs_destroy(void *userdata)
  * ignored.  The 'st_ino' field is ignored except if the 'use_ino'
  * mount option is given.
  */
+
+inode *find_inode(const char *path){
+    inode* buf = (inode*) malloc(512);
+
+    int i = 0;
+    // iterate through all of the blocks containing inodes
+    for(; i < NUM_INODE_BLOCKS; i++){
+        block_read(i+1, buf);
+        
+        // iterate through all of the inodes per 1 block
+        int k = 0;
+        for (; k < INODES_PER_BLOCK; k++){
+            inode *tmp = &buf[k];
+
+            // check if name is equal to given path
+            if (strcmp(tmp->full_path, path) == 0){
+                return tmp;
+            }
+        }
+    }
+    return NULL;
+}
+
 int sfs_getattr(const char *path, struct stat *statbuf)
 {
     int retstat = 0;
@@ -133,6 +156,25 @@ int sfs_getattr(const char *path, struct stat *statbuf)
     
     log_msg("\nsfs_getattr(path=\"%s\", statbuf=0x%08x)\n",
 	  path, statbuf);
+
+    inode *target = find_inode(path);
+
+    // values inside inode
+    statbuf->st_ino = target->st_ino;
+    statbuf->st_nlink = target->st_nlink;
+    statbuf->st_size = target->st_size;
+    statbuf->st_blksize = target->st_blksize;
+
+    // useless data
+    statbuf->st_dev = 0;     /* ID of device containing file */
+    statbuf->st_mode = 0;    /* protection */
+    statbuf->st_uid = 0;     /* user ID of owner */
+    statbuf->st_gid = 0;     /* group ID of owner */
+    statbuf->st_rdev = 0;    /* device ID (if special file) */
+    statbuf->st_blocks = 0;  /* number of 512B blocks allocated */
+    statbuf->st_atime = 0;   /* time of last access */
+    statbuf->st_mtime = 0;   /* time of last modification */
+    statbuf->st_ctime = 0; 
     
     return retstat;
 }
