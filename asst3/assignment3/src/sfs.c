@@ -29,12 +29,12 @@
 
 #include "log.h"
 
-int my_ceil(double num){
-    if (num == (int)num) {
-        return (int)num;
-    }
-    return (int)num + 1;
-}
+/* int my_ceil(double num){ */
+/*     if (num == (int)num) { */
+/*         return (int)num; */
+/*     } */
+/*     return (int)num + 1; */
+/* } */
 
 ///////////////////////////////////////////////////////////
 //
@@ -59,18 +59,11 @@ void *sfs_init(struct fuse_conn_info *conn)
     log_conn(conn);
     log_fuse_context(fuse_get_context());
 
-    // init inode bitmap
-    SFS_DATA->inodes = calloc(MAX_INODES, sizeof(char));
-
-    // init datablock bitmap
-    SFS_DATA->datablocks = malloc(sizeof(datablock_entry) * NUM_DATABLOCKS);
+    // init inode and datablock bitmaps
     int i = 0;
     for (; i < NUM_DATABLOCKS; i++) {
-        SFS_DATA->datablocks[i] = (datablock_entry) {
-            .is_free = 0,
-            .index = i,
-            .next = NULL
-        };
+        if (i < MAX_INODES) SFS_DATA->inodes[i] = '0';
+        SFS_DATA->datablocks[i] = '0';
     }
 
     // open the disk
@@ -80,29 +73,33 @@ void *sfs_init(struct fuse_conn_info *conn)
     int superblocknum = 462;
     int *buf = calloc(1, 512);
     *buf = superblocknum;
-    block_write(0, (void*)buf);
+    block_write(SUPERBLOCK, buf);
 
     // init inodes
-    int inodes_per_block = 512 / sizeof(inode);
-    inode in = (inode) {
-    
-    };
     inode *inbuf = calloc(1, 512);
-    i = 0;
-    for (; i < inodes_per_block; i++) {
-        inbuf[i] = (inode) {
-            .st_ino = -1,   /* inode number */
-            .st_nlink = -1,  /* number of hard links TODO: wut*/
-            .st_size = 0,   /* total size, in bytes */
-            .st_blksize = 512, /* blocksize for file system I/O */
-            .full_path = NULL,
-            .datablock_index = NULL
-        };
+    *inbuf = (inode) {
+        .st_ino = -1,
+        .st_size = 0,
+        .st_blksize = BLOCK_SIZE,
+        .full_path = NULL,
+        .relative_path = NULL,
+        .r = (refs) { 
+            .children = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+            .indirect = -1
+        },
+        .is_dir = -1
+    };
+    i = INODE_START;
+    int idx = 0;
+    for (; i < INODE_END; i++) {
+        inbuf->st_ino = idx++;
+        block_write(i, inbuf);
     }
-    i = 0;
-    for (; i < NUM_INODE_BLOCKS; i++) {
-        block_write(i + 1, inbuf);
-    }
+
+    // make '/'
+    inbuf->is_dir = 1;
+    strcpy(inbuf->full_path, "/");
+    strcpy(inbuf->relative_path, "/");
 
     log_msg("\nBRUHHHHHHH\n");
     return SFS_DATA;
@@ -127,45 +124,85 @@ void sfs_destroy(void *userdata)
  * mount option is given.
  */
 
-inode *find_inode(const char *path){
+char[] get_relative_path(char *full_path) {
+    char prev[PATH_MAX];
+    char rel_path[PATH_MAX];
+    strcpy(rel_path, full_path);
+    char* token = strtok(rel_path, "/");
+
+    while (token) {
+        printf("token: %s\n", token);
+        token = strtok(NULL, " ");
+        strcpy(prev, token);
+    }
+
+    return prev;
+}
+
+inode *get_inode(int i) {
+    inode* buf = (inode*) malloc(512);
+    block_read(i, buf);
+
+    return buf;
+}
+
+inode *find_inode(const char *path) {
     inode* buf = (inode*) malloc(512);
 
-    int i = 0;
-    // iterate through all of the blocks containing inodes
-    for(; i < NUM_INODE_BLOCKS; i++){
-        block_read(i+1, buf);
-        
-        // iterate through all of the inodes per 1 block
-        int k = 0;
-        for (; k < INODES_PER_BLOCK; k++){
-            inode *tmp = &buf[k];
+    int i = INODE_START;
+    for (; i < INODE_END; i++) {
+        block_read(i, buf);
+        inode *tmp = &buf[i];
 
-            // check if name is equal to given path
-            if (strcmp(tmp->full_path, path) == 0){
-                return tmp;
-            }
+        // check if name is equal to given path
+        if (strcmp(tmp->full_path, path) == 0){
+            return tmp;
         }
     }
+
     return NULL;
+}
+
+int make_inode(const char *full_path, int is_dir) {
+    int i = 0;
+    for (; i < MAX_INODES; i++) {
+        if (SFS_DATA->inodes[i] == '0') {
+            inode *in = get_inode(i + INODE_START);
+            in->is_dir = is_dir;
+            strcpy(in->full_path, full_path);
+            strcpy(in->relative_path, get_relative_path(full_path));
+            block_write(i + INODE_START, in);
+
+            SFS_DATA->inodes[i] = '1';
+
+            return i + INODE_START;
+        }
+    }
+
+    return -1;
 }
 
 int sfs_getattr(const char *path, struct stat *statbuf)
 {
     int retstat = 0;
-    char fpath[PATH_MAX];
+    /* char fpath[PATH_MAX]; */
     
     log_msg("\nsfs_getattr(path=\"%s\", statbuf=0x%08x)\n",
 	  path, statbuf);
 
     inode *target = find_inode(path);
 
+    if (!target) {
+        // TODO: handle this err
+    }
+
     // values inside inode
     statbuf->st_ino = target->st_ino;
-    statbuf->st_nlink = target->st_nlink;
     statbuf->st_size = target->st_size;
     statbuf->st_blksize = target->st_blksize;
 
     // useless data
+    statbuf->st_nlink = 1;
     statbuf->st_dev = 0;     /* ID of device containing file */
     statbuf->st_mode = 0;    /* protection */
     statbuf->st_uid = 0;     /* user ID of owner */
@@ -184,8 +221,7 @@ int sfs_getattr(const char *path, struct stat *statbuf)
  *
  * If the file does not exist, first create it with the specified
  * mode, and then open it.
- *
- * If this method is not implemented or under Linux kernel
+ * * If this method is not implemented or under Linux kernel
  * versions earlier than 2.6.15, the mknod() and open() methods
  * will be called instead.
  *
@@ -197,6 +233,36 @@ int sfs_create(const char *path, mode_t mode, struct fuse_file_info *fi)
     log_msg("\nsfs_create(path=\"%s\", mode=0%03o, fi=0x%08x)\n",
 	    path, mode, fi);
     
+    inode *target = find_inode(path);
+
+    // file not found, so make it
+    int child = -1;
+    if (!target) {
+        if ((child = make_inode(path, 0)) == -1) {
+            // err
+        }
+    }
+
+    // add to '/' children
+    target = find_inode("/");
+    refs r = target->refs;
+    while (1) {
+        int i = 0;
+        for (; i < 12; i++) {
+            if (r.children[i] == -1) {
+                r.children[i] = child;
+                return retstat;
+            }
+        }
+
+        if (r.indirect == -1) {
+            // TODO: get free datablock
+        }
+
+        refs *refblock = calloc(1, 512);
+        block_read(target->r, refblock);
+        refs r = *refblock;
+    }
     
     return retstat;
 }
@@ -363,6 +429,35 @@ int sfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offse
 {
     int retstat = 0;
     
+    inode *target = find_inode(path);
+    if (!target) {
+        // TODO: handle this err
+    }
+
+    refs r = target->refs;
+    while (1) {
+        int i = 0;
+        for (; i < 12; i++) {
+            if (r.children[i] == -1) {
+                continue;
+            }
+            
+            inode *inodeblock = calloc(1, 512);
+            block_read(r.children[i], inodeblock);
+            inode in = *inodeblock;
+            if (filler(buf, in->relative_path, NULL, 0) != 0) {
+                return 0;
+            }
+        }
+
+        if (r.indirect == -1) {
+            break;
+        }
+
+        refs *refblock = calloc(1, 512);
+        block_read(target->r, refblock);
+        refs r = *refblock;
+    }
     
     return retstat;
 }

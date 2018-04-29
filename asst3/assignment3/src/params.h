@@ -27,41 +27,39 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-/* USEFUL STUFF FOR SFS */
+#define SFS_DATA ((struct sfs_state *) fuse_get_context()->private_data)
+#define NUM_DATABLOCKS 31000
+#define MAX_INODES 200
+#define NUM_BLOCKS 31250
+#define BLOCK_SIZE 512
+// (1) superblock| (1 - 200) inodes| (201  - 31200) datablocks
+# define SUPERBLOCK 0
+# define INODE_START 1
+# define INODE_END 200
+# define INODE_START 201
+# define INODE_END 31200
 
-typedef struct datablock_entry {
-    char is_free;
-    int index;
-    struct datablock_entry *next;
-} datablock_entry;
+typedef struct _refs {
+    int children[12];
+    int indirect;
+} refs;
 
 typedef struct _inode {
-    ino_t     st_ino;     /* inode number */
-    nlink_t   st_nlink;   /* number of hard links */
-    off_t     st_size;    /* total size, in bytes */
+    ino_t st_ino;     /* inode number */
+    off_t st_size;    /* total size, in bytes */
     blksize_t st_blksize; /* blocksize for file system I/O */
-    char *full_path;
-    datablock_entry *datablock_index;
+    char full_path[PATH_MAX];
+    char relative_path[PATH_MAX];
+    refs r;
+    int is_dir;
 } inode;
 
 struct sfs_state {
     FILE *logfile;
     char *diskfile;
     FILE *disk;
-    char *inodes;
-    datablock_entry *datablocks;
+    char inodes[MAX_INODES];
+    char datablocks[NUM_DATABLOCKS];
 };
-
-#define SFS_DATA ((struct sfs_state *) fuse_get_context()->private_data)
-
-#define NUM_DATABLOCKS 31000
-#define MAX_INODES 200
-#define NUM_BLOCKS 31250
-// (1) superblock| (200) inodes| (31000) datablocks
-
-#define BLOCK_SIZE 512
-#define INODES_PER_BLOCK (BLOCK_SIZE/sizeof(inode))
-#define NUM_INODE_BLOCKS ((MAX_INODES/INODES_PER_BLOCK)+1)
-
 
 #endif
