@@ -70,6 +70,22 @@ inode *find_inode(const char *path) {
     return NULL;
 }
 
+int find_inode_idx(const char *path) {
+    int i = INODE_START;
+    for (; i < INODE_END; i++) {
+        inode *tmp = (inode*) get_block(i);
+
+        // check if name is equal to given path
+        if (strcmp(tmp->full_path, path) == 0){
+            return i;
+        }
+
+        free(tmp);
+    }
+
+    return NULL;
+}
+
 int make_inode(const char *full_path, int is_dir) {
     int idx = find_free(SFS_DATA->inodes, MAX_INODES);
 
@@ -302,6 +318,32 @@ int sfs_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 int sfs_unlink(const char *path)
 {
     int retstat = 0;
+
+    int in_idx = find_inode_idx(path); // find inode
+    SFS_DATA->inodes[in_idx] = '0'; // remove from bitmap
+    
+    // rm children from root
+    inode * target = find_inode("/");
+    refs *r = &(target->r);
+    int j = 0;
+    for (; j < 11; j++) {
+        int i = 0;
+        for (; i < 12; i++) {
+            if (r->children[i] == in_idx) {
+                r->children[i] = -1;
+                block_write(1, target);
+                return retstat;
+            }
+        }
+
+        if (r->indirect != -1) {
+            r = (refs*) get_block(r->indirect);
+        }
+
+    }
+    
+    // TODO: free datablocks as well
+
     log_msg("sfs_unlink(path=\"%s\")\n", path);
 
     
@@ -325,7 +367,7 @@ int sfs_open(const char *path, struct fuse_file_info *fi)
 	    path, fi);
 
     
-    return retstat;
+    return (find_inode(path) != NULL);
 }
 
 /** Release an open file
