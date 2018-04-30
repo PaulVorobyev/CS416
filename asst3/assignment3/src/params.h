@@ -27,7 +27,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define SFS_DATA ((struct sfs_state *) fuse_get_context()->private_data)
 #define NUM_DATABLOCKS 31000
 #define MAX_INODES 200
 #define NUM_BLOCKS 31250
@@ -61,5 +60,7 @@ struct sfs_state {
     char inodes[MAX_INODES];
     char datablocks[NUM_DATABLOCKS];
 };
+
+#define SFS_DATA ((struct sfs_state *) fuse_get_context()->private_data)
 
 #endif

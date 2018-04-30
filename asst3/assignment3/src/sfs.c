@@ -22,6 +22,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <time.h>
 
 #ifdef HAVE_SYS_XATTR_H
 #include <sys/xattr.h>
@@ -199,12 +200,11 @@ int sfs_getattr(const char *path, struct stat *statbuf)
 
     int is_slash = !strcmp(target->full_path, "/");
     if (is_slash) {
-    
         statbuf->st_mode = S_IFDIR | 0755;    /* protection */
         statbuf->st_nlink = 2;
     } else {
-        statbuf->st_mode = S_IFDIR | 0755;    /* protection */
-        statbuf->st_nlink = 2;
+        statbuf->st_mode = S_IFREG | 0644;    /* protection */
+        statbuf->st_nlink = 1;
         statbuf->st_size = target->st_size;
     }
 
@@ -214,13 +214,13 @@ int sfs_getattr(const char *path, struct stat *statbuf)
 
     // useless data
     statbuf->st_dev = 0;     /* ID of device containing file */
-    statbuf->st_uid = 0;     /* user ID of owner */
-    statbuf->st_gid = 0;     /* group ID of owner */
+    statbuf->st_uid = getuid();     /* user ID of owner */
+    statbuf->st_gid = getgid();     /* group ID of owner */
     statbuf->st_rdev = 0;    /* device ID (if special file) */
     statbuf->st_blocks = 0;  /* number of 512B blocks allocated */
-    statbuf->st_atime = 0;   /* time of last access */
-    statbuf->st_mtime = 0;   /* time of last modification */
-    statbuf->st_ctime = 0; 
+    statbuf->st_atime = time(NULL);   /* time of last access */
+    statbuf->st_mtime = time(NULL);   /* time of last modification */
+    statbuf->st_atime = statbuf->st_mtime = statbuf->st_ctime = time(NULL); 
 
     log_msg("\nsfs_getattr() WE HAVE FILLED THE STATBUF\n", path);
     
@@ -247,21 +247,23 @@ int sfs_create(const char *path, mode_t mode, struct fuse_file_info *fi)
     inode *target = find_inode(path);
 
     // file not found, so make it
-    int child = -1;
+    int child = make_inode(path, 0);
     if (!target) {
-        if ((child = make_inode(path, 0)) == -1) {
-            // err
+        if (child == -1) {
+            log_msg("\nsfs_create() I CANT CREATE THE INODEEEE: %s\n", path);
+            return -ENOENT;
         }
     }
 
     // add to '/' children
     target = find_inode("/");
-    refs *r = &target->r;
+    refs *r = &(target->r);
     while (1) {
         int i = 0;
         for (; i < 12; i++) {
             if (r->children[i] == -1) {
                 r->children[i] = child;
+                block_write(1, target);
                 return retstat;
             }
         }
@@ -284,13 +286,15 @@ int sfs_create(const char *path, mode_t mode, struct fuse_file_info *fi)
             block_write(idx, r);
 
             free(r);
-
+            
+            log_msg("\nINNER LOOP: %d", retstat);
             return retstat;
         }
 
         r = (refs*) get_block(r->indirect);
     }
     
+    log_msg("\nNOT INNER LOOP: %d", retstat);
     return retstat;
 }
 
@@ -454,10 +458,12 @@ int sfs_opendir(const char *path, struct fuse_file_info *fi)
 int sfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset,
 	       struct fuse_file_info *fi)
 {
+    log_msg("\nsfs_readdir()");
     int retstat = 0;
     
     inode *target = find_inode(path);
     if (!target) {
+        log_msg("sfs_readdir() ERROR");
         return -ENOENT;
     }
 
@@ -466,14 +472,17 @@ int sfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offse
         int i = 0;
         for (; i < 12; i++) {
             if (r.children[i] == -1) {
+                log_msg("\n\n\nChild at index %d is %d", i, r.children[i]);
                 continue;
+            } else {
+                log_msg("FOUND!!!");
             }
             
             inode *inodeblock = calloc(1, 512);
             block_read(r.children[i], inodeblock);
             inode in = *inodeblock;
             if (filler(buf, in.relative_path, NULL, 0) != 0) {
-                return 0;
+                return 1;
             }
         }
 
@@ -502,6 +511,12 @@ int sfs_releasedir(const char *path, struct fuse_file_info *fi)
     return retstat;
 }
 
+int sfs_utimens(const char * path, const struct timespec ts[2]) {
+    log_msg("\nsfs_utimens()");
+
+    return 0;
+}
+
 struct fuse_operations sfs_oper = {
   .init = sfs_init,
   .destroy = sfs_destroy,
@@ -519,7 +534,9 @@ struct fuse_operations sfs_oper = {
 
   .opendir = sfs_opendir,
   .readdir = sfs_readdir,
-  .releasedir = sfs_releasedir
+  .releasedir = sfs_releasedir,
+  
+  .utimens = sfs_utimens
 };
 
 void sfs_usage()
