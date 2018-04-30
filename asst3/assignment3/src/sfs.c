@@ -30,6 +30,15 @@
 
 #include "log.h"
 
+int find_bitmap_index(int idx) {
+    // if inode
+    if (idx <= INODE_END) {
+        return idx -1;
+    } else {
+        return idx - DATABLOCK_START;
+    }
+}
+
 int find_free(char bitmap[], int size) {
     int i = 0;
     for (; i < size; i++) {
@@ -52,6 +61,27 @@ void *get_block(int i) {
     block_read(i, buf);
 
     return buf;
+}
+
+void clear_inode(int idx) {
+    inode *in = (inode*) get_block(idx);
+
+    *in = (inode) {
+        .st_ino = in->st_ino,
+        .st_size = 0,
+        .st_blksize = BLOCK_SIZE,
+        .full_path = 0,
+        .relative_path = 0,
+        .r = (refs) { 
+            .children = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+            .indirect = -1
+        },
+        .is_dir = -1
+    };
+
+    block_write(idx, in);
+
+    free(in);
 }
 
 inode *find_inode(const char *path) {
@@ -83,7 +113,7 @@ int find_inode_idx(const char *path) {
         free(tmp);
     }
 
-    return NULL;
+    return -1;
 }
 
 int make_inode(const char *full_path, int is_dir) {
@@ -320,7 +350,10 @@ int sfs_unlink(const char *path)
     int retstat = 0;
 
     int in_idx = find_inode_idx(path); // find inode
-    SFS_DATA->inodes[in_idx] = '0'; // remove from bitmap
+    if (in_idx == -1) {
+        return -ENOENT;
+    }
+    SFS_DATA->inodes[find_bitmap_index(in_idx)] = '0'; // remove from bitmap
     
     // rm children from root
     inode * target = find_inode("/");
@@ -332,18 +365,42 @@ int sfs_unlink(const char *path)
             if (r->children[i] == in_idx) {
                 r->children[i] = -1;
                 block_write(1, target);
-                return retstat;
+                break;
             }
         }
 
         if (r->indirect != -1) {
             r = (refs*) get_block(r->indirect);
+        } else {
+            break;
         }
 
     }
     
-    // TODO: free datablocks as well
+    // free datablocks as well
+    inode *in = (inode*) get_block(in_idx);
+    r = &(in->r);
+    while (1) {
+        int i = 0;
+        for (; i < 12; i++) {
+            if (r->children[i] != -1) {
+                SFS_DATA->datablocks[find_bitmap_index(r->children[i])] = '0';
+            }
+        }
 
+        if (r->indirect == -1) {
+            break;
+        }
+
+        r = (refs*) get_block(r->indirect);
+
+        // free indirect block
+        SFS_DATA->datablocks[find_bitmap_index(r->indirect)] = '0';
+        r->indirect = -1;
+    }
+
+    clear_inode(in_idx);
+    
     log_msg("sfs_unlink(path=\"%s\")\n", path);
 
     
