@@ -48,8 +48,8 @@ typedef struct _inode {
     ino_t st_ino;     /* inode number */
     off_t st_size;    /* total size, in bytes */
     blksize_t st_blksize; /* blocksize for file system I/O */
-    char full_path[100];
-    char relative_path[100];
+    char full_path[200];
+    char relative_path[200];
     refs r;
     int is_dir;
 } inode;

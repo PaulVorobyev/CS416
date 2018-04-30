@@ -39,16 +39,9 @@ int find_free(char bitmap[], int size) {
 }
 
 char *get_relative_path(char *full_path) {
-    char *prev = malloc(PATH_MAX);
-    char rel_path[PATH_MAX];
-    strcpy(rel_path, full_path);
-    char* token = strtok(rel_path, "/");
-
-    while (token) {
-        printf("token: %s\n", token);
-        token = strtok(NULL, " ");
-        strcpy(prev, token);
-    }
+    char *prev = malloc(200);
+    char *great = strrchr(full_path, '/');
+    strcpy(prev, great + 1);
 
     return prev;
 }
@@ -129,7 +122,9 @@ void *sfs_init(struct fuse_conn_info *conn)
     for (; i < NUM_DATABLOCKS; i++) {
         if (i < MAX_INODES) SFS_DATA->inodes[i] = '0';
         SFS_DATA->datablocks[i] = '0';
+
     }
+    SFS_DATA->inodes[0] = '1';
 
     // open the disk
     disk_open(SFS_DATA->diskfile);
@@ -192,27 +187,30 @@ void sfs_destroy(void *userdata)
 
 int sfs_getattr(const char *path, struct stat *statbuf)
 {
-    int retstat = 0;
-    /* char fpath[PATH_MAX]; */
-    
     log_msg("\nsfs_getattr(path=\"%s\", statbuf=0x%08x)\n",
 	  path, statbuf);
 
     inode *target = find_inode(path);
 
     if (!target) {
-        // TODO: handle this err
         log_msg("\nsfs_getattr() I CANT FIND THE INODEEEE: %s\n", path);
+        return -ENOENT;
     }
 
-    // TODO: check if dir
+    int is_slash = !strcmp(target->full_path, "/");
+    if (is_slash) {
+    
+        statbuf->st_mode = S_IFDIR | 0755;    /* protection */
+        statbuf->st_nlink = 2;
+    } else {
+        statbuf->st_mode = S_IFDIR | 0755;    /* protection */
+        statbuf->st_nlink = 2;
+        statbuf->st_size = target->st_size;
+    }
 
     // values inside inode
     statbuf->st_ino = target->st_ino;
-    statbuf->st_size = target->st_size;
     statbuf->st_blksize = target->st_blksize;
-    statbuf->st_nlink = 2;
-    statbuf->st_mode = S_IFDIR | 0755;    /* protection */
 
     // useless data
     statbuf->st_dev = 0;     /* ID of device containing file */
@@ -226,7 +224,7 @@ int sfs_getattr(const char *path, struct stat *statbuf)
 
     log_msg("\nsfs_getattr() WE HAVE FILLED THE STATBUF\n", path);
     
-    return retstat;
+    return 0;
 }
 
 /**
@@ -272,6 +270,7 @@ int sfs_create(const char *path, mode_t mode, struct fuse_file_info *fi)
             int idx = find_free(SFS_DATA->datablocks, NUM_DATABLOCKS);
             if (idx == -1) {
                 // TODO: err, no room for kid ref
+                log_msg("\nCANT FIND ROOM FOR KIDSSS\n");
             }
 
             r = (refs*) get_block(idx + DATABLOCK_START);
@@ -459,7 +458,7 @@ int sfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offse
     
     inode *target = find_inode(path);
     if (!target) {
-        // TODO: handle this err
+        return -ENOENT;
     }
 
     refs r = target->r;
