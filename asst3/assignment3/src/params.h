@@ -36,8 +36,8 @@
 # define SUPERBLOCK 0
 # define INODE_START 1
 # define INODE_END 200
-# define INODE_START 201
-# define INODE_END 31200
+# define DATABLOCK_START 201
+# define DATABLOCK_END 31200
 
 typedef struct _refs {
     int children[12];
@@ -48,8 +48,8 @@ typedef struct _inode {
     ino_t st_ino;     /* inode number */
     off_t st_size;    /* total size, in bytes */
     blksize_t st_blksize; /* blocksize for file system I/O */
-    char full_path[PATH_MAX];
-    char relative_path[PATH_MAX];
+    char full_path[100];
+    char relative_path[100];
     refs r;
     int is_dir;
 } inode;
