@@ -376,12 +376,21 @@ int sfs_create(const char *path, mode_t mode, struct fuse_file_info *fi)
     // add to '/' children
     target = find_inode("/");
     refs *r = &(target->r);
+    int cur_idx = 1;
     while (1) {
         int i = 0;
         for (; i < 12; i++) {
             if (r->children[i] == -1) {
                 r->children[i] = child;
-                block_write(1, target);
+
+                log_msg("added child %d", child);
+
+                if (cur_idx == 1) {
+                    block_write(1, target);
+                } else {
+                    block_write(cur_idx, r);
+                }
+
                 return retstat;
             }
         }
@@ -396,22 +405,28 @@ int sfs_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 
             idx += DATABLOCK_START;
 
+            refs *tempr = r;
+            tempr->indirect = idx;
+            if (cur_idx == 1) {
+                block_write(1, target);
+            } else {
+                block_write(cur_idx, tempr);
+            }
+
             r = (refs*) get_block(idx);
             *r = (refs) {
                 .children = {child, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
                 .indirect = -1
             };
 
-            r->indirect = idx;
 
             block_write(idx, r);
 
-            free(r);
-            
             log_msg("\nINNER LOOP: %d", retstat);
             return retstat;
         }
 
+        cur_idx = r->indirect;
         r = (refs*) get_block(r->indirect);
     }
     
@@ -736,7 +751,6 @@ int sfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offse
         refs *refblock = calloc(1, 512);
         block_read(r.indirect, refblock);
         r = *refblock;
-        free(refblock);
     }
     
     return retstat;
