@@ -557,16 +557,18 @@ int sfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
     memcpy(buf, block + (offset % BLOCK_SIZE), first_read_size);
 
     // read from middle blocks
-    int num_block_for_reading = my_ceil((size + (offset % BLOCK_SIZE)) / BLOCK_SIZE);
+    int num_block_for_reading = my_ceil((double)(size + (offset % BLOCK_SIZE)) / (double)BLOCK_SIZE) - 1;
     int i = 0;
     for (; i < num_block_for_reading - 1; i++) {
-        block = get_block(get_datablock_idx(block_num + i, in));
+        log_msg("reading middle blocknum %d + %d + 1", block_num, i);
+        block = get_block(get_datablock_idx(block_num + i + 1, in));
         memcpy(buf + (first_read_size + (i * BLOCK_SIZE)), block, BLOCK_SIZE);
     }
 
     // read from last block
     int last_read_size = (size - first_read_size) % BLOCK_SIZE;
-    block = get_block(get_datablock_idx(block_num + i, in));
+    block = get_block(get_datablock_idx(block_num + i + 1, in));
+    log_msg("reading last blocknum %d + %d + 1", block_num, i);
     memcpy((buf + size) - last_read_size, block, last_read_size);
 
     // padding
@@ -607,22 +609,24 @@ int sfs_write(const char *path, const char *buf, size_t size, off_t offset,
     memcpy(block + (offset % BLOCK_SIZE), buf, first_write_size);
     block_write(block_idx, block);
 
-    // write to middle blocks
-    int num_block_for_writing = my_ceil((size + (offset % BLOCK_SIZE)) / BLOCK_SIZE);
+    // write to middle blocks TODO: -1?
+    int num_block_for_writing = my_ceil((double)(size + (offset % BLOCK_SIZE)) / (double)BLOCK_SIZE) - 1;
     int i = 0;
     for (; i < num_block_for_writing - 1; i++) {
-        block_idx = get_datablock_idx(block_num + i, in);
+        block_idx = get_datablock_idx(block_num + i + 1, in);
         block = get_block(block_idx);
         memcpy(block, buf + (first_write_size + (i * BLOCK_SIZE)), BLOCK_SIZE);
         block_write(block_idx, block);
+        log_msg("copying middle blocknum %d + %d + 1", block_num, i);
     }
 
     // write to last block
     int last_write_size = (size - first_write_size) % BLOCK_SIZE;
-    block_idx = get_datablock_idx(block_num + i, in);
+    block_idx = get_datablock_idx(block_num + i + 1, in);
     block = get_block(block_idx);
     memcpy(block, (buf + size) - last_write_size, last_write_size);
     block_write(block_idx, block);
+    log_msg("copying last blocknum %d + %d + 1", block_num, i);
 
     int new_bytes = (offset + size) - in->st_size;
     in->st_size += new_bytes;
