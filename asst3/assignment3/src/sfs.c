@@ -29,6 +29,7 @@
 #endif
 
 #include "log.h"
+#include <strings.h>
 
 int my_min (int x, int y){
     return (x > y) ? y : x;
@@ -541,8 +542,38 @@ int sfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
     log_msg("\nsfs_read(path=\"%s\", buf=0x%08x, size=%d, offset=%lld, fi=0x%08x)\n",
 	    path, buf, size, offset, fi);
 
-   
-    return retstat;
+    inode *in = find_inode(path);
+
+    int their_size = size;
+    size = my_min(size, in->st_size - offset);
+
+    // get first block
+    int block_num = offset / BLOCK_SIZE;
+    int block_idx = get_datablock_idx(block_num, in);
+    void *block = get_block(block_idx);
+
+    // read from first block
+    int first_read_size = my_min(size, (BLOCK_SIZE - (offset % BLOCK_SIZE)));
+    memcpy(buf, block + (offset % BLOCK_SIZE), first_read_size);
+
+    // read from middle blocks
+    int num_block_for_reading = my_ceil((size + (offset % BLOCK_SIZE)) / BLOCK_SIZE);
+    int i = 0;
+    for (; i < num_block_for_reading - 1; i++) {
+        block = get_block(get_datablock_idx(block_num + i, in));
+        memcpy(buf + (first_read_size + (i * BLOCK_SIZE)), block, BLOCK_SIZE);
+    }
+
+    // read from last block
+    int last_read_size = (size - first_read_size) % BLOCK_SIZE;
+    block = get_block(get_datablock_idx(block_num + i, in));
+    memcpy((buf + size) - last_read_size, block, last_read_size);
+
+    // padding
+    bzero(buf + size, their_size - size);
+
+    
+    return their_size;
 }
 
 /** Write data to an open file
@@ -580,16 +611,22 @@ int sfs_write(const char *path, const char *buf, size_t size, off_t offset,
     int num_block_for_writing = my_ceil((size + (offset % BLOCK_SIZE)) / BLOCK_SIZE);
     int i = 0;
     for (; i < num_block_for_writing - 1; i++) {
-        block = get_block(get_datablock_idx(block_num + i, in));
+        block_idx = get_datablock_idx(block_num + i, in);
+        block = get_block(block_idx);
         memcpy(block, buf + (first_write_size + (i * BLOCK_SIZE)), BLOCK_SIZE);
-        block_write(block_idx + i, block);
+        block_write(block_idx, block);
     }
 
     // write to last block
     int last_write_size = (size - first_write_size) % BLOCK_SIZE;
-    block = get_block(get_datablock_idx(block_num + i, in));
+    block_idx = get_datablock_idx(block_num + i, in);
+    block = get_block(block_idx);
     memcpy(block, (buf + size) - last_write_size, last_write_size);
-    block_write(block_idx + i, block);
+    block_write(block_idx, block);
+
+    int new_bytes = (offset + size) - in->st_size;
+    in->st_size += new_bytes;
+    block_write(in->st_ino + INODE_START, in);
     
     return size;
 }
