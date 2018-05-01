@@ -30,6 +30,17 @@
 
 #include "log.h"
 
+int my_min (int x, int y){
+    return (x > y) ? y : x;
+}
+
+int my_ceil(double num){
+    if (num == (int)num) {
+        return (int)num;
+    }
+    return (int)num + 1;
+}
+
 int find_bitmap_index(int idx) {
     // if inode
     if (idx <= INODE_END) {
@@ -138,6 +149,66 @@ int make_inode(const char *full_path, int is_dir) {
     free(in);
 
     return idx + INODE_START;
+}
+
+int get_datablock_idx(int idx, inode* in) {
+    int block_jumps = idx / 11;
+    int i = 0;
+    refs *r = &in->r;
+    for (; i < block_jumps; i++) {
+        r = (refs*) get_block(r->indirect);
+    }
+
+    int idx_in_refs = idx % 12;
+    int child = r->children[idx_in_refs];
+
+    if (child == -1) {
+        child = get_new_block(in);
+    }
+
+    return child;
+} 
+
+int get_new_block(inode* in) {
+    refs *r = &(in->r);
+
+    while (1) {
+        int i = 0;
+        for (; i < 12; i++) {
+            if (r->children[i] == -1) {
+                // get you a new kid
+                int new_kid = find_free(SFS_DATA->datablocks, NUM_DATABLOCKS);
+                SFS_DATA->datablocks[new_kid] = '1';
+                new_kid += DATABLOCK_START;
+                r->children[i] = new_kid;
+                block_write(in->st_ino + INODE_START, in);
+                return new_kid;
+            }
+        }
+
+        if (r->indirect == -1) {
+            int idx = find_free(SFS_DATA->datablocks, NUM_DATABLOCKS);
+            SFS_DATA->datablocks[idx] = '1';
+            if (idx == -1) {
+                // TODO: err, no room for kid ref
+                log_msg("\nCANT FIND ROOM FOR KIDSSS\n");
+            }
+
+            idx += DATABLOCK_START;
+
+            r = (refs*) get_block(idx);
+            *r = (refs) {
+                .children = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+                .indirect = -1
+            };
+
+            r->indirect = idx;
+
+            block_write(idx, r);
+        }
+
+        r = (refs*) get_block(r->indirect);
+    }
 }
 
 
@@ -316,12 +387,15 @@ int sfs_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 
         if (r->indirect == -1) {
             int idx = find_free(SFS_DATA->datablocks, NUM_DATABLOCKS);
+            SFS_DATA->datablocks[idx] = '1';
             if (idx == -1) {
                 // TODO: err, no room for kid ref
                 log_msg("\nCANT FIND ROOM FOR KIDSSS\n");
             }
 
-            r = (refs*) get_block(idx + DATABLOCK_START);
+            idx += DATABLOCK_START;
+
+            r = (refs*) get_block(idx);
             *r = (refs) {
                 .children = {child, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
                 .indirect = -1
@@ -423,8 +497,7 @@ int sfs_open(const char *path, struct fuse_file_info *fi)
     log_msg("\nsfs_open(path\"%s\", fi=0x%08x)\n",
 	    path, fi);
 
-    
-    return (find_inode(path) != NULL);
+    return (find_inode(path) != NULL) ? 0 : -ENOENT;
 }
 
 /** Release an open file
@@ -486,9 +559,39 @@ int sfs_write(const char *path, const char *buf, size_t size, off_t offset,
     int retstat = 0;
     log_msg("\nsfs_write(path=\"%s\", buf=0x%08x, size=%d, offset=%lld, fi=0x%08x)\n",
 	    path, buf, size, offset, fi);
+
+    inode *in = find_inode(path);
+
+    if (offset > in->st_size) {
+        return 0;
+    }
+
+    // get first block
+    int block_num = offset / BLOCK_SIZE;
+    int block_idx = get_datablock_idx(block_num, in);
+    void *block = get_block(block_idx);
+
+    // write to first block
+    int first_write_size = my_min(size, (BLOCK_SIZE - (offset % BLOCK_SIZE)));
+    memcpy(block + (offset % BLOCK_SIZE), buf, first_write_size);
+    block_write(block_idx, block);
+
+    // write to middle blocks
+    int num_block_for_writing = my_ceil((size + (offset % BLOCK_SIZE)) / BLOCK_SIZE);
+    int i = 0;
+    for (; i < num_block_for_writing - 1; i++) {
+        block = get_block(get_datablock_idx(block_num + i, in));
+        memcpy(block, buf + (first_write_size + (i * BLOCK_SIZE)), BLOCK_SIZE);
+        block_write(block_idx + i, block);
+    }
+
+    // write to last block
+    int last_write_size = (size - first_write_size) % BLOCK_SIZE;
+    block = get_block(get_datablock_idx(block_num + i, in));
+    memcpy(block, (buf + size) - last_write_size, last_write_size);
+    block_write(block_idx + i, block);
     
-    
-    return retstat;
+    return size;
 }
 
 

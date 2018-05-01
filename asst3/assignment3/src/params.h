@@ -37,6 +37,7 @@
 # define INODE_END 200
 # define DATABLOCK_START 201
 # define DATABLOCK_END 31200
+#define MAX_FILE_BLOCKS 100
 
 typedef struct _refs {
     int children[12];
